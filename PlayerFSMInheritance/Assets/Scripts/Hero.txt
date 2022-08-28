@@ -1,0 +1,353 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Hero : Lives
+{
+    #region Player State Constants
+    private const int sp_stGround               = 100;
+    private const int sp_stAir                  = 101;
+    private const int sp_stWall                 = 102;
+    private const int sp_stLedge                = 103;
+    private const int sp_stAbility              = 104;
+
+    private const int sb_stIdleGroundBasic      = 200;
+    private const int sb_stIdleGroundLong       = 201;
+    private const int sb_stIdleWallBasic        = 202;
+    private const int sb_stFreeFall             = 203;
+    private const int sb_stGliding              = 204;
+    private const int sb_stWalk                 = 205;
+    private const int sb_stRun                  = 206;
+    private const int sb_stJumpOnGround         = 207;
+    private const int sb_stJumpOnAir            = 208;
+    private const int sb_stJumpOnWall           = 209;
+    private const int sb_stJumpDown             = 210;
+    private const int sb_stWallSliding          = 211;
+    private const int sb_stLedgeClimb           = 212;
+    private const int sb_stSit                  = 213;
+    private const int sb_stHeadUp               = 214;
+    private const int sb_stRoll                 = 215;
+    private const int sb_stDash                 = 216;
+    private const int sb_stTakeDown             = 217;
+
+    private StateMachine m_spFSM;
+    private StateMachine m_sbFSM;
+    private InputData inputData;
+    #endregion
+
+    #region Components
+    public int spState;
+    #endregion
+
+    #region Player Constants
+    // sp_stGround options
+    // sp_stAir options
+    // sp_stWall options
+    // sp_stLedge options
+    // st_stAbility options
+    // component options
+
+    // sb_stWalk options
+    public float walkSpeed = 4.5f;
+
+    // sb_stFreeFall options
+    public float maxFreeFallSpeedY = 12.0f;
+    public int freeFallAccelFrameY = 39;
+    protected DiscreteGraph freeFallAccelGraphY;
+    #endregion
+
+    #region Player Variables
+    [Header("Player Variables")]
+    // sb_stIdleGroundBasic options    
+    // Wall from Feet detecting options
+    public Vector2 wallFeetPosition;
+    protected RaycastHit2D detectedWallFeet;
+    public bool isDetectedWallFeet;
+    public int isHitWallFeet;
+
+    // Wall from Head detecting options
+    public Vector2 wallHeadPosition;
+    protected RaycastHit2D detectedWallHead;
+    public bool isDetectedWallHead;
+    public int isHitWallHead;
+
+    // sb_stFreeFall options
+    public int proceedFreeFallAccelFrameY;
+
+    #endregion
+
+    #region Initializer
+    protected override void InitComponents()
+    {
+        base.InitComponents();
+    }
+
+    protected override void InitGraphs()
+    {
+        base.InitGraphs();
+
+        freeFallAccelGraphY = new DiscreteLinearGraph(freeFallAccelFrameY);
+    }
+
+    protected override void InitPhysics()
+    {
+        base.InitPhysics();
+
+        GetWallPositionFeet(ref wallFeetPosition);
+        GetWallPositionHead(ref wallHeadPosition);
+    }
+
+    private void InitSuperStateMachine()
+    {
+        m_spFSM = new StateMachine(sp_stGround);
+
+        m_spFSM.SetCallbacks(sp_stGround, spInput_Ground, spLogic_Ground, null, null);
+        m_spFSM.SetCallbacks(sp_stAir, spInput_Air, spLogic_Air, spEnter_Air, null);
+        m_spFSM.SetCallbacks(sp_stWall, spInput_Wall, spLogic_Wall, null, null);
+        m_spFSM.SetCallbacks(sp_stLedge, null, null, null, null);
+        m_spFSM.SetCallbacks(sp_stAbility, null, null, null, null);
+    }
+
+    private void InitSubStateMachine()
+    {
+        m_sbFSM = new StateMachine(sb_stIdleGroundBasic);
+
+        m_sbFSM.SetCallbacks(sb_stIdleGroundBasic, null, null, null, null);
+        m_sbFSM.SetCallbacks(sb_stIdleGroundLong, null, null, null, null);
+        m_sbFSM.SetCallbacks(sb_stIdleWallBasic, null, null, null, null);
+        m_sbFSM.SetCallbacks(sb_stFreeFall, null, null, null, null);
+        m_sbFSM.SetCallbacks(sb_stGliding, null, null, null, null);
+        m_sbFSM.SetCallbacks(sb_stWalk, null, null, null, null);
+        m_sbFSM.SetCallbacks(sb_stRun, null, null, null, null);
+        m_sbFSM.SetCallbacks(sb_stJumpOnGround, null, null, null, null);
+        m_sbFSM.SetCallbacks(sb_stJumpOnAir, null, null, null, null);
+        m_sbFSM.SetCallbacks(sb_stJumpOnWall, null, null, null, null);
+        m_sbFSM.SetCallbacks(sb_stJumpDown, null, null, null, null);
+        m_sbFSM.SetCallbacks(sb_stWallSliding, null, null, null, null);
+        m_sbFSM.SetCallbacks(sb_stLedgeClimb, null, null, null, null);
+        m_sbFSM.SetCallbacks(sb_stSit, null, null, null, null);
+        m_sbFSM.SetCallbacks(sb_stHeadUp, null, null, null, null);
+        m_sbFSM.SetCallbacks(sb_stRoll, null, null, null, null);
+        m_sbFSM.SetCallbacks(sb_stDash, null, null, null, null);
+        m_sbFSM.SetCallbacks(sb_stTakeDown, null, null, null, null);
+    }
+    #endregion
+
+    #region Unity Event Functions
+    protected override void Start()
+    {
+        base.Start();
+
+        InitSuperStateMachine();
+        InitSubStateMachine();
+    }
+
+    protected override void FixedUpdate()
+    {
+        CheckLookingDirection(inputData.xNegative, inputData.xPositive);
+
+        base.FixedUpdate();
+        float detectLength = 0.5f;
+        float hitLength = 0.04f;
+
+        CheckWallFeet(detectLength, hitLength, lookingDirection);
+        CheckWallHead(detectLength, hitLength, lookingDirection);
+
+        m_spFSM.UpdateLogic();
+        m_sbFSM.UpdateLogic();
+    }
+
+    protected override void Update()
+    {
+        base.Update();
+
+        inputData.Copy(InputHandler.data);
+
+        m_spFSM.UpdateInput();
+        m_sbFSM.UpdateInput();
+
+        spState = m_spFSM.state;
+    }
+    #endregion
+
+    #region Physics Utilities    
+    #endregion
+
+    #region Physics Checkers
+    protected void CheckWallFeet(float detectLength, float hitLength, int lookDir)
+    {
+        GetWallPositionFeet(ref wallFeetPosition);
+        isDetectedWallFeet = GetWall(out detectedWallFeet, wallFeetPosition, detectLength, lookDir);
+        isHitWallFeet = isDetectedWallFeet && detectedWallFeet.distance <= hitLength ? lookingDirection : 0;
+    }
+
+    protected void CheckWallHead(float detectLength, float hitLength, int lookDir)
+    {
+        GetWallPositionFeet(ref wallHeadPosition);
+        isDetectedWallHead = GetWall(out detectedWallHead, wallHeadPosition, detectLength, lookDir);
+        isHitWallHead = isDetectedWallHead && detectedWallHead.distance <= hitLength ? lookingDirection : 0;
+    }
+    #endregion
+
+    #region State Transition Checkers
+    #endregion
+
+    #region Implement Super State; sp_stGround
+    private void spInput_Ground()
+    {
+        if(!isDetectedGround)
+        {
+            m_spFSM.ChangeState(sp_stAir);
+        }
+    }
+
+    private void spLogic_Ground()
+    {
+        if(inputData.xInput == 0)
+        {
+            IdleOnGround();
+            DisableGravity();
+        }
+        else
+        {
+            EnableGravity();
+            MoveOnGround(walkSpeed, lookingDirection);
+        }
+    }
+    #endregion
+
+    #region Implement Super State; sp_stAir
+    private void spEnter_Air()
+    {
+        EnableGravity();
+
+        if(currentVelocity.y > 0)
+        {
+            proceedFreeFallAccelFrameY = 0;
+        }
+        else if(currentVelocity.y < -maxFreeFallSpeedY)
+        {
+            proceedFreeFallAccelFrameY = freeFallAccelFrameY;
+        }
+        else
+        {
+            for(int i = 0; i < freeFallAccelFrameY; i++)
+            {
+                if(currentVelocity.y <= -maxFreeFallSpeedY * freeFallAccelGraphY[i])
+                {
+                    proceedFreeFallAccelFrameY = i;
+                    break;
+                }
+            }
+        }
+    }
+
+    private void spInput_Air()
+    {
+        if(isHitGround)
+        {
+            m_spFSM.ChangeState(sp_stGround);
+            return;
+        }
+        if(inputData.xInput == lookingDirection && inputData.yNegative == 0 && isHitWallFeet == lookingDirection && isHitWallHead == lookingDirection)
+        {
+            m_spFSM.ChangeState(sp_stWall);
+            return;
+        }
+        // TODO: sp_stLedge 상태로 이동
+    }
+
+    private void spLogic_Air()
+    {
+        if(inputData.xInput == 0)
+            SetVelocityX(0.0f);
+        else
+            SetVelocityX(walkSpeed * lookingDirection);
+
+        if(currentVelocity.y <= 0.0f)
+        {
+            if(proceedFreeFallAccelFrameY < freeFallAccelFrameY)
+                proceedFreeFallAccelFrameY++;
+
+            FreeFallOnAir(maxFreeFallSpeedY, freeFallAccelGraphY, proceedFreeFallAccelFrameY);
+        }
+    }
+    #endregion
+
+    #region Implement Super State; sp_stWall
+    private void spInput_Wall()
+    {
+        if(inputData.yNegative != 0 || isHitWallFeet == 0 || isHitWallHead == 0 || isDetectedGround)
+        {
+            m_spFSM.ChangeState(sp_stAir);
+            return;
+        }
+    }
+
+    private void spLogic_Wall()
+    {
+        if(xInput == lookingDirection && )
+    }
+    #endregion
+
+    #region Implement Super State; sp_stLedge
+    #endregion
+
+    #region Implement Super State; sp_stAbility
+    #endregion
+
+    #region Implement Sub State; sb_stIdleGroundBasic
+    #endregion
+
+    #region Implement Sub State; sb_stIdleGroundLong
+    #endregion
+
+    #region Implement Sub State; sb_stIdleWallBasic
+    #endregion
+
+    #region Implement Sub State; sb_stFreeFall
+    #endregion
+
+    #region Implement Sub State; sb_stGliding
+    #endregion
+
+    #region Implement Sub State; sb_stWalk
+    #endregion
+
+    #region Implement Sub State; sb_stRun
+    #endregion
+
+    #region Implement Sub State; sb_stJumpOnGround
+    #endregion
+
+    #region Implement Sub State; sb_stJumpOnAir
+    #endregion
+
+    #region Implement Sub State; sb_stJumpOnWall
+    #endregion
+
+    #region Implement Sub State; sb_stJumpDown
+    #endregion
+
+    #region Implement Sub State; sb_stWallSliding
+    #endregion
+
+    #region Implement Sub State; sb_stLedgeClimb
+    #endregion
+
+    #region Implement Sub State; sb_stSit
+    #endregion
+
+    #region Implement Sub State; sb_stHeadUp
+    #endregion
+
+    #region Implement Sub State; sb_stRoll
+    #endregion
+
+    #region Implement Sub State; sb_stDash
+    #endregion
+
+    #region Implement Sub State; sb_stTakeDown
+    #endregion
+}

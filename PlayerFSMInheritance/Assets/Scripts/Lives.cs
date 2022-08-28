@@ -9,6 +9,7 @@ public abstract class Lives : MonoBehaviour
     #region Components
     public BoxCollider2D feetBox;
     public BoxCollider2D headBox;
+    public BoxCollider2D bodyBox;
     protected Rigidbody2D rigid { get; private set; }
 
     public float entityHeight
@@ -130,6 +131,21 @@ public abstract class Lives : MonoBehaviour
     }
     #endregion
 
+    // Change Collision State
+    protected void AcceptCollision(Collider2D collider)
+    {
+        Physics2D.IgnoreCollision(feetBox, collider, false);
+        Physics2D.IgnoreCollision(headBox, collider, false);
+        Physics2D.IgnoreCollision(bodyBox, collider, false);
+    }
+
+    protected void IgnoreCollision(Collider2D collider)
+    {
+        Physics2D.IgnoreCollision(feetBox, collider, true);
+        Physics2D.IgnoreCollision(headBox, collider, true);
+        Physics2D.IgnoreCollision(bodyBox, collider, true);
+    }
+
     #region Physics Checker
     // Checker
     protected void CheckGround(out RaycastHit2D detectedGround, out bool hit, bool canCheck, Vector2 feetPosition, float detectLength, float hitLength)
@@ -141,7 +157,7 @@ public abstract class Lives : MonoBehaviour
             return;
         }
 
-        int layer = LayerInfo.groundMask;
+        int layer = LayerInfo.groundMask | LayerInfo.throughableGroundMask;
 
         detectedGround = Physics2D.Raycast(feetPosition, Vector2.down, detectLength, layer);
         hit = detectedGround && detectedGround.distance <= hitLength;

@@ -64,7 +64,7 @@ public class Character : Lives
     public int jumpOnGroundDeaccelFrameY;
     private DiscreteGraph jumpOnGroundDeaccelGraphY;
     // stJumpDown options
-    public int jumpDownSpeed;
+    public float jumpDownSpeed;
     public int jumpDownDeaccelFrameY;
     private DiscreteGraph jumpDownDeaccelGraphY;
     // stRoll options
@@ -126,10 +126,15 @@ public class Character : Lives
     public int isHitHeadSideWall = 0;
 
     public bool canCheckJumpDownLower;
+    public RaycastHit2D detectedJumpDownLowerGroundBefore;
     public RaycastHit2D detectedJumpDownLowerGround;
 
     public bool canCheckJumpDownUpper;
+    public RaycastHit2D detectedJumpDownUpperGroundBefore;
     public RaycastHit2D detectedJumpDownUpperGround;
+
+    public bool canCheckLedge;
+    public bool isHitLedge;
 
     // stAbility options
     public bool isEndOfAbility = false;
@@ -194,7 +199,9 @@ public class Character : Lives
         freeFallAccelGraphY = new DiscreteLinearGraph(freeFallAccelFrameY);
         glidingAccelGraphX = new DiscreteLinearGraph(glidingAccelFrameX);
         glidingDeaccelGraphX = new DiscreteLinearGraph(glidingDeaccelFrameX);
+        wallSlidingAccelGrpahY = new DiscreteLinearGraph(wallSlidingAccelFrameY);
         jumpOnGroundDeaccelGraphY = new DiscreteLinearGraph(jumpOnGroundDeaccelFrameY);
+        jumpDownDeaccelGraphY = new DiscreteLinearGraph(jumpDownDeaccelFrameY);
     }
 
     protected override void InitPhysics()
@@ -207,18 +214,18 @@ public class Character : Lives
         machine = new StateMachine(stIdleOnGround);
 
         machine.SetCallbacks(stIdleOnGround, Input_IdleOnGround, Logic_IdleOnGround, Enter_IdleOnGround, null);
-        machine.SetCallbacks(stIdleLongOnGround, Input_IdleLongOnGround, Logic_IdleLongOnGround, null, End_IdleLongOnGround);
+        machine.SetCallbacks(stIdleLongOnGround, Input_IdleLongOnGround, Logic_IdleLongOnGround, Enter_IdleLongOnGround, End_IdleLongOnGround);
         machine.SetCallbacks(stSit, Input_Sit, Logic_Sit, Enter_Sit, null);
         machine.SetCallbacks(stHeadUp, Input_HeadUp, Logic_HeadUp, Enter_HeadUp, null);
-        machine.SetCallbacks(stWalk, Input_Walk, Logic_Walk, null, null);
-        machine.SetCallbacks(stRun, Input_Run, Logic_Run, null, null);
+        machine.SetCallbacks(stWalk, Input_Walk, Logic_Walk, Enter_Walk, null);
+        machine.SetCallbacks(stRun, Input_Run, Logic_Run, Enter_Run, null);
         machine.SetCallbacks(stFreeFall, Input_FreeFall, Logic_FreeFall, Enter_FreeFall, null);
         machine.SetCallbacks(stGliding, Input_Gliding, Logic_Gliding, Enter_Gliding, null);
-        machine.SetCallbacks(stIdleWall, null, null, null, null);
-        machine.SetCallbacks(stWallSliding, null, null, null, null);
+        machine.SetCallbacks(stIdleWall, Input_IdleWall, Logic_IdleWall, Enter_IdleWall, End_IdleWall);
+        machine.SetCallbacks(stWallSliding, Input_WallSliding, Logic_WallSliding, Enter_WallSliding, null);
         machine.SetCallbacks(stLedgeClimb, null, null, null, null);
         machine.SetCallbacks(stJumpOnGround, Input_JumpOnGround, Logic_JumpOnGround, Enter_JumpOnGround, null);
-        machine.SetCallbacks(stJumpDown, null, null, null, null);
+        machine.SetCallbacks(stJumpDown, Input_JumpDown, Logic_JumpDown, Enter_JumpDown, End_JumpDown);
         machine.SetCallbacks(stRoll, null, null, null, null);
         machine.SetCallbacks(stJumpOnAir, null, null, null, null);
         machine.SetCallbacks(stDash, null, null, null, null);
@@ -275,13 +282,13 @@ public class Character : Lives
         }
     }
 
-    protected void CheckThroughableGroundDown(out RaycastHit2D detectedGround, bool canCheck, Vector2 feetPosition, float detectLength)
+    protected void CheckThroughableGroundDown(out RaycastHit2D detectedGround, bool canCheck, Vector2 headPosition, float detectLength)
     {
         int layer = LayerInfo.throughableGroundMask;
 
         if(canCheck)
         {
-            detectedGround = Physics2D.Raycast(feetPosition, Vector2.down, detectLength, layer);
+            detectedGround = Physics2D.Raycast(headPosition, Vector2.down, detectLength, layer);
         }
         else
         {
@@ -316,6 +323,8 @@ public class Character : Lives
 
         CheckMoveDirection();
         lookingDirection = CheckLookingDirection(inputData.xNegative, inputData.xPositive, lookingDirection);
+
+        CheckThroughableGroundUpper();
     }
 
     private void CheckMoveDirection()
@@ -330,6 +339,55 @@ public class Character : Lives
         }
     }
 
+    private void CheckThroughableGroundUpper()
+    {
+        detectedJumpDownUpperGroundBefore = detectedJumpDownUpperGround;
+        CheckThroughableGroundUp(out detectedJumpDownUpperGround, canCheckJumpDownUpper, feetPosition, entityHeight + 1.0f);
+
+        if(detectedJumpDownUpperGroundBefore)
+        {
+            if(!detectedJumpDownUpperGround)
+            {
+                AcceptCollision(detectedJumpDownUpperGroundBefore.collider);
+            }
+            else if(detectedJumpDownUpperGroundBefore != detectedJumpDownUpperGround)
+            {
+                AcceptCollision(detectedJumpDownUpperGroundBefore.collider);
+                IgnoreCollision(detectedJumpDownUpperGround.collider);
+            }
+        }
+        else if(detectedJumpDownUpperGround)
+        {
+            IgnoreCollision(detectedJumpDownUpperGround.collider);
+        }
+    }
+
+    private void CheckThroughableGroundLower()
+    {
+        detectedJumpDownLowerGroundBefore = detectedJumpDownLowerGround;
+        CheckThroughableGroundDown(out detectedJumpDownLowerGround, canCheckJumpDownLower, headPosition + Vector2.up * 0.5f, entityHeight + 2.5f);
+
+        if(detectedJumpDownLowerGroundBefore)
+        {
+            if(!detectedJumpDownLowerGround)
+            {
+                AcceptCollision(detectedJumpDownLowerGroundBefore.collider);
+            }
+            else if(detectedJumpDownLowerGroundBefore != detectedJumpDownLowerGround)
+            {
+                AcceptCollision(detectedJumpDownLowerGroundBefore.collider);
+                IgnoreCollision(detectedJumpDownLowerGround.collider);
+            }
+            else
+            {
+                IgnoreCollision(detectedJumpDownLowerGround.collider);
+            }
+        }
+        else if(detectedJumpDownLowerGround)
+        {
+            IgnoreCollision(detectedJumpDownLowerGround.collider);
+        }
+    }
     #endregion
 
     #region Implement Super State; Ground
@@ -346,6 +404,13 @@ public class Character : Lives
     {
         if(leftJumpOnGroundCount == jumpOnGroundCount)
             leftJumpOnGroundCount--;
+    }
+    #endregion
+
+    #region Implement Super State; Wall
+    private void Enter_Wall()
+    {
+        leftJumpOnAirCount = jumpOnAirCount;
     }
     #endregion
 
@@ -382,9 +447,13 @@ public class Character : Lives
                 machine.ChangeState(stWalk);
             }
         }
-        else if(inputData.jumpDown)
+        else if(inputData.jumpDown && leftJumpOnGroundCount > 0)
         {
             machine.ChangeState(stJumpOnGround);
+        }
+        else if(inputData.dashDown)
+        {
+            machine.ChangeState(stRoll);
         }
         else if(inputData.yNegative != 0)
         {
@@ -409,6 +478,11 @@ public class Character : Lives
     #endregion
 
     #region Implement State; stIdleLongOnGround
+    private void Enter_IdleLongOnGround()
+    {
+        Enter_Ground();
+    }
+
     private void Input_IdleLongOnGround()
     {
         if(!isHitGround)
@@ -426,9 +500,13 @@ public class Character : Lives
                 machine.ChangeState(stWalk);
             }
         }
-        else if(inputData.jumpDown)
+        else if(inputData.jumpDown && leftJumpOnGroundCount > 0)
         {
             machine.ChangeState(stJumpOnGround);
+        }
+        else if(inputData.dashDown)
+        {
+            machine.ChangeState(stRoll);
         }
         else if(inputData.yNegative != 0)
         {
@@ -454,7 +532,11 @@ public class Character : Lives
     #region Implement State; stSit
     private void Enter_Sit()
     {
+        Enter_Ground();
+
         proceedSitFrame = 0;
+        canCheckJumpDownUpper = false;
+        canCheckJumpDownLower = true;
     }
 
     private void Input_Sit()
@@ -463,9 +545,20 @@ public class Character : Lives
         {
             machine.ChangeState(stFreeFall);
         }
-        else if(inputData.jumpDown)
+        else if(inputData.jumpDown && leftJumpOnGroundCount > 0)
         {
-            machine.ChangeState(stJumpOnGround);
+            if(detectedJumpDownLowerGround)
+            {
+                machine.ChangeState(stJumpDown);
+            }
+            else
+            {
+                machine.ChangeState(stJumpOnGround);
+            }
+        }
+        else if(inputData.dashDown)
+        {
+            machine.ChangeState(stRoll);
         }
         else if(inputData.yNegative == 0)
         {
@@ -477,14 +570,27 @@ public class Character : Lives
     {
         Logic_IdleXY();
 
+        if(inputData.yNegative != 0)
+        {
+            float detectLength = 0.04f;
+            CheckThroughableGroundDown(out detectedJumpDownLowerGround, canCheckJumpDownLower, feetPosition, detectLength);
+        }
+
         proceedSitFrame++;
     }
 
+    private void End_Sit()
+    {
+        canCheckJumpDownUpper = true;
+        canCheckJumpDownLower = false;
+    }
     #endregion
 
     #region Implement State; stHeadUp
     private void Enter_HeadUp()
     {
+        Enter_Ground();
+
         proceedHeadUpFrame = 0;
     }
 
@@ -494,9 +600,13 @@ public class Character : Lives
         {
             machine.ChangeState(stFreeFall);
         }
-        else if(inputData.jumpDown)
+        else if(inputData.jumpDown && leftJumpOnGroundCount > 0)
         {
             machine.ChangeState(stJumpOnGround);
+        }
+        else if(inputData.dashDown)
+        {
+            machine.ChangeState(stRoll);
         }
         else if(inputData.yPositive == 0)
         {
@@ -513,6 +623,11 @@ public class Character : Lives
     #endregion
 
     #region Implement State; stWalk
+    private void Enter_Walk()
+    {
+        Enter_Ground();
+    }
+
     private void Input_Walk()
     {
         if(!isHitGround)
@@ -523,9 +638,13 @@ public class Character : Lives
         {
             machine.ChangeState(stIdleOnGround);
         }
-        else if(inputData.jumpDown)
+        else if(inputData.jumpDown && leftJumpOnGroundCount > 0)
         {
             machine.ChangeState(stJumpOnGround);
+        }
+        else if(inputData.dashDown)
+        {
+            machine.ChangeState(stRoll);
         }
         else if(inputData.yNegative != 0)
         {
@@ -548,6 +667,11 @@ public class Character : Lives
     #endregion
 
     #region Implement State; stRun
+    private void Enter_Run()
+    {
+        Enter_Ground();
+    }
+
     private void Input_Run()
     {
         if(!isHitGround)
@@ -558,9 +682,13 @@ public class Character : Lives
         {
             machine.ChangeState(stIdleOnGround);
         }
-        else if(inputData.jumpDown)
+        else if(inputData.jumpDown && leftJumpOnGroundCount > 0)
         {
             machine.ChangeState(stJumpOnGround);
+        }
+        else if(inputData.dashDown)
+        {
+            machine.ChangeState(stRoll);
         }
         else if(inputData.yNegative != 0)
         {
@@ -591,7 +719,7 @@ public class Character : Lives
         {
             proceedFreeFallAccelFrameY = 0;
         }
-        else if(currentVelocity.y < -maxFreeFallSpeedY)
+        else if(currentVelocity.y <= -maxFreeFallSpeedY)
         {
             proceedFreeFallAccelFrameY = freeFallAccelFrameY;
         }
@@ -625,9 +753,32 @@ public class Character : Lives
                 machine.ChangeState(stWalk);
             }
         }
+        else if(inputData.jumpDown)
+        {
+            if(inputData.yNegative == 0 && leftJumpOnAirCount > 0)
+            {
+                machine.ChangeState(stJumpOnAir);
+            }
+            else if(inputData.yNegative != 0)
+            {
+                machine.ChangeState(stTakeDown);
+            }
+        }
+        else if(inputData.dashDown && leftDashCount > 0)
+        {
+            machine.ChangeState(stDash);
+        }
         else if(inputData.yPositive != 0)
         {
             machine.ChangeState(stGliding);
+        }
+        else if(!isDetectedGround && inputData.xInput == lookingDirection && isHitFeetSideWall == inputData.xInput && isHitHeadSideWall == inputData.xInput)
+        {
+            machine.ChangeState(stIdleWall);
+        }
+        else if(isHitLedge)
+        {
+            machine.ChangeState(stLedgeClimb);
         }
     }
 
@@ -695,9 +846,25 @@ public class Character : Lives
                 machine.ChangeState(stWalk);
             }
         }
+        else if(inputData.jumpDown && leftJumpOnAirCount > 0)
+        {
+            machine.ChangeState(stJumpOnAir);
+        }
+        else if(inputData.dashDown && leftDashCount > 0)
+        {
+            machine.ChangeState(stDash);
+        }
         else if(inputData.yPositive == 0)
         {
             machine.ChangeState(stFreeFall);
+        }
+        else if(!isDetectedGround && inputData.xInput == lookingDirection && isHitFeetSideWall == inputData.xInput && isHitHeadSideWall == inputData.xInput)
+        {
+            machine.ChangeState(stIdleWall);
+        }
+        else if(isHitLedge)
+        {
+            machine.ChangeState(stLedgeClimb);
         }
     }
 
@@ -742,9 +909,76 @@ public class Character : Lives
     #endregion
 
     #region Implement State; stIdleWall
+    private void Enter_IdleWall()
+    {
+        Enter_Wall();
+
+        DisableGravity();
+    }
+
+    private void Input_IdleWall()
+    {
+        if(isDetectedGround || isHitFeetSideWall == 0 || isHitHeadSideWall == 0 || inputData.yNegDown)
+        {
+            machine.ChangeState(stFreeFall);
+        }
+        else if(inputData.xInput == 0)
+        {
+            machine.ChangeState(stWallSliding);
+        }
+        else if(inputData.jumpDown)
+        {
+            machine.ChangeState(stJumpOnWall);
+        }
+    }
+
+    private void Logic_IdleWall()
+    {
+        Logic_IdleXY();
+    }
+
+    private void End_IdleWall()
+    {
+        EnableGravity();
+    }
     #endregion
 
     #region Implement State; stWallSliding
+    private void Enter_WallSliding()
+    {
+        Enter_Wall();
+
+        proceedWallSlidingAccelFrameY = 0;
+    }
+
+    private void Input_WallSliding()
+    {
+        if(isHitGround)
+        {
+            machine.ChangeState(stIdleOnGround);
+        }
+        else if(isDetectedGround || isHitFeetSideWall == 0 || isHitHeadSideWall == 0 || inputData.yNegDown)
+        {
+            machine.ChangeState(stFreeFall);
+        }
+        else if(!isDetectedGround && inputData.xInput == lookingDirection && isHitFeetSideWall == inputData.xInput && isHitHeadSideWall == inputData.xInput)
+        {
+            machine.ChangeState(stIdleWall);
+        }
+        else if(inputData.jumpDown)
+        {
+            machine.ChangeState(stJumpOnWall);
+        }
+    }
+
+    private void Logic_WallSliding()
+    {
+        if(proceedWallSlidingAccelFrameY < wallSlidingAccelFrameY)
+            proceedWallSlidingAccelFrameY++;
+
+        Logic_IdleX();
+        Logic_MoveOnAirY(-maxWallSlidingSpeedY, wallSlidingAccelGrpahY, proceedWallSlidingAccelFrameY - 1);
+    }
     #endregion
 
     #region Implement State; stLedgeClimb
@@ -780,6 +1014,29 @@ public class Character : Lives
                 machine.ChangeState(stGliding);
             }
         }
+        else if(inputData.jumpDown)
+        {
+            if(inputData.yNegative == 0 && leftJumpOnAirCount > 0)
+            {
+                machine.ChangeState(stJumpOnAir);
+            }
+            else if(inputData.yNegative != 0)
+            {
+                machine.ChangeState(stTakeDown);
+            }
+        }
+        else if(inputData.dashDown && leftDashCount > 0)
+        {
+            machine.ChangeState(stDash);
+        }
+        else if(!isDetectedGround && inputData.xInput == lookingDirection && isHitFeetSideWall == inputData.xInput && isHitHeadSideWall == inputData.xInput)
+        {
+            machine.ChangeState(stIdleWall);
+        }
+        else if(isHitLedge)
+        {
+            machine.ChangeState(stLedgeClimb);
+        }
     }
 
     private void Logic_JumpOnGround()
@@ -793,6 +1050,46 @@ public class Character : Lives
     #endregion
 
     #region Implement State; stJumpDown
+    private void Enter_JumpDown()
+    {
+        Enter_Ability();
+
+        canCheckJumpDownUpper = false;
+        leftJumpDownDeaccelFrameY = jumpDownDeaccelFrameY;
+        proceedFreeFallAccelFrameY = 0;
+    }
+
+    private void Input_JumpDown()
+    {
+        if(leftJumpDownDeaccelFrameY == 0 && !detectedJumpDownLowerGround)
+        {
+            machine.ChangeState(stFreeFall);
+        }
+    }
+
+    private void Logic_JumpDown()
+    {
+        CheckThroughableGroundLower();
+
+        if(leftJumpDownDeaccelFrameY > 0)
+        {
+            leftJumpDownDeaccelFrameY--;
+            Logic_MoveOnAirY(jumpDownSpeed, jumpDownDeaccelGraphY, leftJumpDownDeaccelFrameY);
+        }
+        else
+        {
+            if(proceedFreeFallAccelFrameY < freeFallAccelFrameY)
+                proceedFreeFallAccelFrameY++;
+
+            Logic_MoveOnAirY(-maxFreeFallSpeedY, freeFallAccelGraphY, proceedFreeFallAccelFrameY - 1);
+        }
+    }
+
+    private void End_JumpDown()
+    {
+        canCheckJumpDownUpper = true;
+        CheckThroughableGroundLower();
+    }
     #endregion
 
     #region Implement State; stRoll

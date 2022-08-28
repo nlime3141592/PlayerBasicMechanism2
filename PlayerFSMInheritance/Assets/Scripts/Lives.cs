@@ -73,7 +73,7 @@ public abstract class Lives : MonoBehaviour
 
     protected virtual void FixedUpdate()
     {
-
+        currentVelocity = rigid.velocity;
     }
     #endregion
 

@@ -365,7 +365,7 @@ public class Character : Lives
     private void CheckThroughableGroundLower()
     {
         detectedJumpDownLowerGroundBefore = detectedJumpDownLowerGround;
-        CheckThroughableGroundDown(out detectedJumpDownLowerGround, canCheckJumpDownLower, headPosition + Vector2.up * 0.5f, entityHeight + 2.5f);
+        CheckThroughableGroundDown(out detectedJumpDownLowerGround, canCheckJumpDownLower, headPosition + Vector2.up * 1.0f, entityHeight + 2.5f);
 
         if(detectedJumpDownLowerGroundBefore)
         {
@@ -713,13 +713,14 @@ public class Character : Lives
     #region Implement State; stFreeFall
     private void Enter_FreeFall()
     {
-        Enter_Air();
+        // Enter_Air();
+        EnableGravity();
 
-        if(currentVelocity.y >= 0.0f)
+        if(currentVelocity.y > 0.0f)
         {
             proceedFreeFallAccelFrameY = 0;
         }
-        else if(currentVelocity.y <= -maxFreeFallSpeedY)
+        else if(currentVelocity.y < -maxFreeFallSpeedY)
         {
             proceedFreeFallAccelFrameY = freeFallAccelFrameY;
         }
@@ -784,26 +785,25 @@ public class Character : Lives
 
     private void Logic_FreeFall()
     {
-        if(inputData.xInput == 0)
-        {
-            Logic_IdleX();
-        }
-        else
-        {
-            Logic_MoveOnAirX(GetMoveSpeed(), lookingDirection);
-        }
+        float vx = 0.0f;
+        float vy = 0.0f;
+
+        if(inputData.xInput != 0)
+            vx = GetMoveSpeed() * lookingDirection;
 
         if(proceedFreeFallAccelFrameY < freeFallAccelFrameY)
             proceedFreeFallAccelFrameY++;
 
-        Logic_MoveOnAirY(-maxFreeFallSpeedY, freeFallAccelGraphY, proceedFreeFallAccelFrameY - 1);
+        vy = -maxFreeFallSpeedY * freeFallAccelGraphY[proceedFreeFallAccelFrameY - 1];
+
+        SetVelocity(vx, vy);
     }
     #endregion
 
     #region Implement State; stGliding
     private void Enter_Gliding()
     {
-        Enter_Air();
+        // Enter_Air();
 
         if(currentVelocity.x == 0)
         {
@@ -1057,6 +1057,9 @@ public class Character : Lives
         canCheckJumpDownUpper = false;
         leftJumpDownDeaccelFrameY = jumpDownDeaccelFrameY;
         proceedFreeFallAccelFrameY = 0;
+
+        canCheckGround = false;
+        canCheckCeil = false;
     }
 
     private void Input_JumpDown()
@@ -1089,6 +1092,9 @@ public class Character : Lives
     {
         canCheckJumpDownUpper = true;
         CheckThroughableGroundLower();
+
+        canCheckGround = true;
+        canCheckCeil = true;
     }
     #endregion
 

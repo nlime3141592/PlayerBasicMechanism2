@@ -380,7 +380,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 123373615}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 2.5, y: -2, z: 1}
+  m_LocalPosition: {x: 0, y: -0.71, z: 1}
   m_LocalScale: {x: 3, y: 0.2, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
@@ -775,7 +775,7 @@ MonoBehaviour:
   maxWallSlidingSpeedY: 1.5
   wallSlidingAccelFrameY: 26
   jumpOnGroundCount: 1
-  jumpOnGroundSpeed: 8
+  jumpOnGroundSpeed: 14
   jumpOnGroundDeaccelFrameY: 16
   jumpDownSpeed: 1.5
   jumpDownDeaccelFrameY: 13

@@ -62,6 +62,12 @@ public class MovableObject : MonoBehaviour
         SetVelocityFinal();
     }
 
+    protected void SetVelocityFinal()
+    {
+        curVelocity = tempVelocity;
+        rigid.velocity = tempVelocity;
+    }
+
     // Change Gravity
     protected void EnableGravity()
     {
@@ -84,10 +90,18 @@ public class MovableObject : MonoBehaviour
 
     protected void CheckGroundThroughable(out RaycastHit2D ground, out bool detected, Vector2 origin, float detectLength)
     {
-        int layer = LayerInfo.throughableMask;
+        int layer = LayerInfo.throughableGroundMask;
 
         ground = Physics2D.Raycast(origin, Vector2.down, detectLength, layer);
         detected = ground;
+    }
+
+    protected void CheckCeil(out RaycastHit2D ceil, out bool detected, Vector2 origin, float detectLength)
+    {
+        int layer = LayerInfo.groundMask;
+
+        ceil = Physics2D.Raycast(origin, Vector2.up, detectLength, layer);
+        detected = ceil;
     }
 
     protected void CheckWall(out RaycastHit2D wall, out int detected, Vector2 origin, float detectLength, int lookingDirection)
@@ -95,7 +109,7 @@ public class MovableObject : MonoBehaviour
         int layer = LayerInfo.groundMask;
 
         wall = Physics2D.Raycast(origin, Vector2.right * lookingDirection, detectLength, layer);
-        detected = wall;
+        detected = wall ? lookingDirection : 0;
     }
 
     // Change Collision Ignorance

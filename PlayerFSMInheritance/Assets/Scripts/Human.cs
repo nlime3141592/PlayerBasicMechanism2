@@ -29,13 +29,16 @@ public class Human : MovableObject
     // Entity Physics
     protected Vector2 feetPos;
     protected Vector2 headPos;
+    protected Vector2 bodyPos;
     protected Vector2 feetSidePos;
     protected Vector2 headSidePos;
 
+    public bool canCheckGround = true;
     public RaycastHit2D detectedGround;
     public bool isDetectedGround;
     public bool isHitGround;
 
+    public bool canCheckCeil = true;
     public RaycastHit2D detectedCeil;
     public bool isDetectedCeil;
     public bool isHitCeil;
@@ -46,11 +49,17 @@ public class Human : MovableObject
     public RaycastHit2D detectedHeadSideWall;
     public int isHitHeadSideWall;
 
-    public int lookingDirection;
-    public bool isRun;
+    public Vector2 moveDirection;
+    public bool canUpdateLookingDirection = true;
+    public int lookingDirection = 1;
+    public bool isRun = false;
     
+    public bool canCheckThroughableGroundToUp = true;
     public RaycastHit2D headThroughableGroundBefore;
     public RaycastHit2D headThroughableGround;
+
+    // Input Handling
+    private InputData inputData;
 
     #region State Constants and Variables
     private StateMachine machine;
@@ -59,7 +68,7 @@ public class Human : MovableObject
     public int proceedIdleOnGroundFrame;
 
     // stLongIdleOnGround options
-    public int longIdleTransitionFrame;
+    public int longIdleTransitionFrame = 120;
 
     // stSit options
     public int proceedSitFrame;
@@ -69,22 +78,25 @@ public class Human : MovableObject
     public int proceedHeadUpFrame;
 
     // stWalk options
-    public float walkSpeed;
+    public float walkSpeed = 3.5f;
 
     // stRun options
-    public float runSpeed;
+    public float runSpeed = 7.5f;
 
     // stFreeFall options
-    public float maxFreeFallSpeed;
-    public int freeFallFrame;
+    public float maxFreeFallSpeed = 12.0f;
+    public int freeFallFrame = 39;
     private DiscreteGraph freeFallGraph;
     public int proceedFreeFallFrame;
 
     // stGliding options
-    public float glidingSpeed;
-    public int glidingFrameX;
-    private DiscreteGraph glidingGraphX;
-    public int proceedGlidingFrameX;
+    public float glidingSpeed = 3.5f;
+    public int glidingAccelFrameX = 39;
+    public int glidingDeaccelFrameX = 26;
+    private DiscreteGraph glidingAccelGraphX;
+    private DiscreteGraph glidingDeaccelGraphX;
+    public int proceedGlidingAccelFrameX;
+    public int leftGlidingDeaccelFrameX;
 
     // stIdleWall options
 
@@ -100,6 +112,7 @@ public class Human : MovableObject
     public bool isHitLedge;
     public Vector2 ledgeCornerTopPos;
     public Vector2 ledgeCornerSidePos;
+    public Vector2 ledgeTeleportPos;
     public bool isEndOfLedgeAnimation;
 
     // stJumpOnGround options
@@ -174,6 +187,11 @@ public class Human : MovableObject
         headPos.Set(headBox.bounds.center.x, headBox.bounds.max.y);
     }
 
+    protected void UpdateBodyPosition()
+    {
+        bodyPos.Set(bodyBox.transform.position.x, bodyBox.transform.position.y);
+    }
+
     protected void UpdateSidePosition()
     {
         float fx = feetBox.bounds.center.x + feetBox.bounds.extents.x * lookingDirection;
@@ -188,13 +206,31 @@ public class Human : MovableObject
 
     protected void UpdateLookingDirection(int xNegative, int xPositive)
     {
-        int xInput = xNegative + xPositive;
-
         if(lookingDirection == 0)
             lookingDirection = 1;
 
+        if(!canUpdateLookingDirection)
+            return;
+
+        int xInput = xNegative + xPositive;
+
         if(xInput != 0)
             lookingDirection = xInput;
+    }
+
+    protected void UpdateMoveDirection()
+    {
+        if(isHitGround)
+        {
+            float x = detectedGround.normal.y;
+            float y = -detectedGround.normal.x;
+
+            moveDirection.Set(x, y);
+        }
+        else
+        {
+            moveDirection.Set(1.0f, 0.0f);
+        }
     }
 
     // Terrain Checker
@@ -238,38 +274,46 @@ public class Human : MovableObject
         }
     }
 
-    protected void CheckThroughableToUp()
+    protected void CheckThroughableToUp(ref RaycastHit2D before, ref RaycastHit2D current)
     {
+        before = current;
+
+        if(!canCheckThroughableGroundToUp)
+        {
+            current = default(RaycastHit2D);
+            return;
+        }
+
         float detectLength = base.height + 2.0f;
         int layer = LayerInfo.throughableGroundMask;
 
-        headThroughableGroundBefore = headThroughableGround;
-        headThroughableGround = Physics2D.Raycast(feetPos, Vector2.up, detectLength, layer);
+        before = current;
+        current = Physics2D.Raycast(feetPos, Vector2.up, detectLength, layer);
 
-        if(headThroughableGroundBefore)
+        if(before)
         {
-            if(!headThroughableGround)
+            if(!current)
             {
-                AcceptCollision(headThroughableGroundBefore.collider);
+                AcceptCollision(before.collider);
             }
-            else if(headThroughableGroundBefore.collider != headThroughableGround.collider)
+            else if(before.collider != current.collider)
             {
-                AcceptCollision(headThroughableGroundBefore.collider);
-                IgnoreCollision(headThroughableGround.collider);
+                AcceptCollision(before.collider);
+                IgnoreCollision(current.collider);
             }
         }
-        else if(headThroughableGround)
+        else if(current)
         {
-            IgnoreCollision(headThroughableGround.collider);
+            IgnoreCollision(current.collider);
         }
     }
 
-    protected void CheckThroughableToDown()
+    protected void CheckThroughableToDown(out RaycastHit2D ground)
     {
         float detectLength = base.height + 2.0f;
         int layer = LayerInfo.throughableGroundMask;
 
-        sitThroughableGround = Physics2D.Raycast(headPos, Vector2.down, detectLength, layer);
+        ground = Physics2D.Raycast(headPos, Vector2.down, detectLength, layer);
     }
 
     // Unity Event Functions
@@ -279,19 +323,19 @@ public class Human : MovableObject
 
         machine = new StateMachine(stIdleOnGround);
 
-        machine.SetCallbacks(stIdleOnGround, null, null, null, null);
-        machine.SetCallbacks(stIdleLongOnGround, null, null, null, null);
-        machine.SetCallbacks(stSit, null, null, null, null);
-        machine.SetCallbacks(stHeadUp, null, null, null, null);
-        machine.SetCallbacks(stWalk, null, null, null, null);
-        machine.SetCallbacks(stRun, null, null, null, null);
-        machine.SetCallbacks(stFreeFall, null, null, null, null);
+        machine.SetCallbacks(stIdleOnGround, Input_IdleOnGround, Logic_IdleOnGround, Enter_IdleOnGround, null);
+        machine.SetCallbacks(stIdleLongOnGround, Input_IdleLongOnGround, Logic_IdleLongOnGround, null, null);
+        machine.SetCallbacks(stSit, Input_Sit, Logic_Sit, Enter_Sit, End_Sit);
+        machine.SetCallbacks(stHeadUp, Input_HeadUp, Logic_HeadUp, Enter_HeadUp, null);
+        machine.SetCallbacks(stWalk, Input_Walk, Logic_Walk, null, null);
+        machine.SetCallbacks(stRun, Input_Run, Logic_Run, null, null);
+        machine.SetCallbacks(stFreeFall, Input_FreeFall, Logic_FreeFall, Enter_FreeFall, null);
         machine.SetCallbacks(stGliding, null, null, null, null);
         machine.SetCallbacks(stIdleWall, null, null, null, null);
         machine.SetCallbacks(stWallSliding, null, null, null, null);
-        machine.SetCallbacks(stLedgeClimb, null, null, null, null);
-        machine.SetCallbacks(stJumpOnGround, null, null, null, null);
-        machine.SetCallbacks(stJumpDown, null, null, null, null);
+        machine.SetCallbacks(stLedgeClimb, Input_LedgeClimb, Logic_LedgeClimb, Enter_LedgeClimb, End_LedgeClimb);
+        machine.SetCallbacks(stJumpOnGround, Input_JumpOnGround, Logic_JumpOnGround, Enter_JumpOnGround, End_JumpOnGround);
+        machine.SetCallbacks(stJumpDown, Input_JumpDown, Logic_JumpDown, Enter_JumpDown, End_JumpDown);
         machine.SetCallbacks(stRoll, null, null, null, null);
         machine.SetCallbacks(stJumpOnAir, null, null, null, null);
         machine.SetCallbacks(stDash, null, null, null, null);
@@ -299,7 +343,8 @@ public class Human : MovableObject
         machine.SetCallbacks(stJumpOnWall, null, null, null, null);
 
         freeFallGraph = new DiscreteLinearGraph(freeFallFrame);
-        glidingGraphX = new DiscreteLinearGraph(glidingFrameX);
+        glidingAccelGraphX = new DiscreteLinearGraph(glidingAccelFrameX);
+        glidingDeaccelGraphX = new DiscreteLinearGraph(glidingDeaccelFrameX);
         wallSlidingGraph = new DiscreteLinearGraph(wallSlidingFrame);
         jumpOnGroundGraph = new DiscreteLinearGraph(jumpOnGroundFrame);
         jumpDownGraph = new DiscreteLinearGraph(jumpDownFrame);
@@ -313,35 +358,497 @@ public class Human : MovableObject
     protected override void Update()
     {
         base.Update();
+
+        inputData.Copy(InputHandler.data);
+
+        machine.UpdateInput();
+
+        Debug.Log(string.Format("current state: {0}", machine.state));
     }
 
     protected override void FixedUpdate()
     {
         base.FixedUpdate();
 
-        int sp = 3;
-        int xInput = InputHandler.data.xInput * sp;
-        int yInput = InputHandler.data.yInput * sp;
-
-        DisableGravity();
-
-        SetVelocityXY(xInput, yInput);
-
+        // Physics Check Before
         UpdateFeetPosition();
         UpdateHeadPosition();
+        UpdateBodyPosition();
         UpdateSidePosition();
-        UpdateLookingDirection(InputHandler.data.xNegative, InputHandler.data.xPositive);
+        UpdateLookingDirection(inputData.xNegative, inputData.xPositive);
 
-        // CheckGroundBasic(out detectedGround, out isHitGround, feetPos, 0.04f);
-        CheckGroundThroughable(out detectedGround, out isHitGround, feetPos, 0.04f);
+        // Terrain Checking
+        CheckGroundAll(out detectedGround, out isHitGround, feetPos, 0.04f);
         CheckCeil(out detectedCeil, out isHitCeil, headPos, 0.04f);
+        CheckThroughableToUp(ref headThroughableGroundBefore, ref headThroughableGround);
         CheckWall(out detectedFeetSideWall, out isHitFeetSideWall, feetSidePos, 0.04f, lookingDirection);
         CheckWall(out detectedHeadSideWall, out isHitHeadSideWall, headSidePos, 0.04f, lookingDirection);
         CheckLedge();
-        // CheckThroughableToUp();
-        CheckThroughableToDown();
+
+        // Physics Check After
+        UpdateMoveDirection();
+
+        // Machine Logic
+        machine.UpdateLogic();
     }
 
     #region Implement State; stIdleOnGround
+    private void Enter_IdleOnGround()
+    {
+        proceedIdleOnGroundFrame = 0;
+
+        leftJumpOnGroundCount = jumpOnGroundCount;
+    }
+
+    private void Input_IdleOnGround()
+    {
+        if(!isHitGround)
+        {
+            machine.ChangeState(stFreeFall);
+        }
+        else if(inputData.jumpDown)
+        {
+            machine.ChangeState(stJumpOnGround);
+        }
+        else if(inputData.yNegative != 0)
+        {
+            machine.ChangeState(stSit);
+        }
+        else if(inputData.yPositive != 0)
+        {
+            machine.ChangeState(stHeadUp);
+        }
+        else if(inputData.xInput != 0)
+        {
+            if(isRun)
+                machine.ChangeState(stRun);
+            else
+                machine.ChangeState(stWalk);
+        }
+        else if(proceedIdleOnGroundFrame >= longIdleTransitionFrame)
+        {
+            machine.ChangeState(stIdleLongOnGround);
+        }
+    }
+
+    private void Logic_IdleOnGround()
+    {
+        proceedIdleOnGroundFrame++;
+
+        SetVelocityXY(0.0f, 0.0f);
+    }
+
+    private void End_IdleOnGround()
+    {
+        proceedIdleOnGroundFrame = 0;
+    }
+    #endregion
+
+    #region Implement State; stIdleLongOnGround
+    private void Input_IdleLongOnGround()
+    {
+        if(!isHitGround)
+        {
+            machine.ChangeState(stFreeFall);
+        }
+        else if(inputData.jumpDown)
+        {
+            machine.ChangeState(stJumpOnGround);
+        }
+        else if(inputData.yNegative != 0)
+        {
+            machine.ChangeState(stSit);
+        }
+        else if(inputData.yPositive != 0)
+        {
+            machine.ChangeState(stHeadUp);
+        }
+        else if(inputData.xInput != 0)
+        {
+            if(isRun)
+                machine.ChangeState(stRun);
+            else
+                machine.ChangeState(stWalk);
+        }
+    }
+
+    private void Logic_IdleLongOnGround()
+    {
+        SetVelocityXY(0.0f, 0.0f);
+    }
+    #endregion
+
+    #region Implement State; stSit
+    private void Enter_Sit()
+    {
+        proceedSitFrame = 0;
+
+        CheckThroughableToDown(out sitThroughableGround);
+    }
+
+    private void Input_Sit()
+    {
+        if(inputData.jumpDown)
+        {
+            if(sitThroughableGround)
+            {
+                machine.ChangeState(stJumpDown);
+            }
+            else
+            {
+                machine.ChangeState(stJumpOnGround);
+            }
+        }
+        else if(inputData.yNegative == 0)
+        {
+            machine.ChangeState(stIdleOnGround);
+        }
+    }
+
+    private void Logic_Sit()
+    {
+        proceedSitFrame++;
+
+        SetVelocityXY(0.0f, 0.0f);
+    }
+
+    private void End_Sit()
+    {
+        proceedSitFrame = 0;
+    }
+    #endregion
+
+    #region Implement State; stHeadUp
+    private void Enter_HeadUp()
+    {
+        proceedHeadUpFrame = 0;
+    }
+
+    private void Input_HeadUp()
+    {
+        if(inputData.jumpDown)
+        {
+            machine.ChangeState(stJumpOnGround);
+        }
+        else if(inputData.yPositive == 0)
+        {
+            machine.ChangeState(stIdleOnGround);
+        }
+    }
+
+    private void Logic_HeadUp()
+    {
+        proceedHeadUpFrame++;
+
+        SetVelocityXY(0.0f, 0.0f);
+    }
+    #endregion
+
+    #region Implement State; stWalk
+    private void Input_Walk()
+    {
+        if(!isHitGround)
+        {
+            machine.ChangeState(stFreeFall);
+        }
+        else if(isRun)
+        {
+            machine.ChangeState(stRun);
+        }
+        else if(inputData.jumpDown)
+        {
+            machine.ChangeState(stJumpOnGround);
+        }
+        else if(inputData.xInput == 0)
+        {
+            machine.ChangeState(stIdleOnGround);
+        }
+    }
+
+    private void Logic_Walk()
+    {
+        Logic_MoveOnGround(moveDirection, walkSpeed, lookingDirection);
+    }
+    #endregion
+
+    #region Implement State; stRun
+    private void Input_Run()
+    {
+        if(!isHitGround)
+        {
+            machine.ChangeState(stFreeFall);
+        }
+        else if(!isRun)
+        {
+            machine.ChangeState(stWalk);
+        }
+        else if(inputData.jumpDown)
+        {
+            machine.ChangeState(stJumpOnGround);
+        }
+        else if(inputData.xInput == 0)
+        {
+            machine.ChangeState(stIdleOnGround);
+        }
+    }
+
+    private void Logic_Run()
+    {
+        Logic_MoveOnGround(moveDirection, runSpeed, lookingDirection);
+    }
+    #endregion
+
+    #region Implement State; stFreeFall
+    private void Enter_FreeFall()
+    {
+        // proceedFreeFallFrame = 0;
+
+        if(currentVelocity.y > 0.0f)
+        {
+            proceedFreeFallFrame = 0;
+        }
+        else if(currentVelocity.y < -maxFreeFallSpeed)
+        {
+            proceedFreeFallFrame = freeFallFrame;
+        }
+        else
+        {
+            for(int i = 0; i < freeFallFrame; i++)
+            {
+                if(currentVelocity.y >= -maxFreeFallSpeed * freeFallGraph[i])
+                {
+                    proceedFreeFallFrame = i;
+                    break;
+                }
+            }
+        }
+    }
+
+    private void Input_FreeFall()
+    {
+        if(isHitGround)
+        {
+            machine.ChangeState(stIdleOnGround);
+        }
+        else if(inputData.xInput == lookingDirection && isHitLedge)
+        {
+            machine.ChangeState(stLedgeClimb);
+        }
+    }
+
+    private void Logic_FreeFall()
+    {
+        if(proceedFreeFallFrame < freeFallFrame)
+            proceedFreeFallFrame++;
+
+        float sp = 5.0f;
+        float vx = sp * inputData.xInput;
+        float vy = -maxFreeFallSpeed * freeFallGraph[proceedFreeFallFrame - 1];
+
+        SetVelocityXY(vx, vy);
+    }
+    #endregion
+
+    #region Implement State; stGliding
+    private void Logic_Gliding()
+    {
+
+    }
+    #endregion
+
+    #region Implement State; stIdleWall
+    private void Logic_IdleWall()
+    {
+        SetVelocityXY(0.0f, 0.0f);
+    }
+    #endregion
+
+    #region Implement State; stWallSliding
+    private void Logic_WallSliding()
+    {
+
+    }
+    #endregion
+
+    #region Implement State; stLedgeClimb
+    private void Enter_LedgeClimb()
+    {
+        canUpdateLookingDirection = false;
+        canCheckLedge = false;
+        isEndOfLedgeAnimation = false;
+
+        DisableGravity();
+
+        Vector2 holdDir = transform.position - (Vector3)headSidePos;
+        Vector2 teleportDir = transform.position - (Vector3)feetPos;
+
+        transform.position = ledgeCornerSidePos + holdDir;
+        ledgeTeleportPos = ledgeCornerTopPos + teleportDir;
+    }
+
+    private void Input_LedgeClimb()
+    {
+        // NOTE:
+        // stIdleOnGround로 전이 시, stIdleOnGround -> stFreeFall -> stLedgeClimb를 한 프레임 안에 돌아서 오기 때문에
+        // 플레이어가 난간 끝으로 텔레포트 하지 않는 현상이 발생한다.
+        // => Enter Time에 transform.position = ledgeCornerSidePos + holdDir 호출 전, holdDir과 teleportDir을 설정해준다.
+        // transform.position은 값 대입 즉시 갱신되지만, bodyPos, feetPos가 물리 프레임이 호출되기 전에 갱신이 되지 않으므로, 이에 따른 차이에 의해
+        // 공중에 뜨는 현상이 발생한 것이다.
+        if(isEndOfLedgeAnimation)
+        {
+            machine.ChangeState(stIdleOnGround);
+        }
+
+        // NOTE: 애니메이션 상태 머신 구현 전 임시 테스트 코드
+        // TODO: 애니메이션 상태 머신 구현 후 이 코드를 지워야 한다.
+        else if(Input.GetKeyDown(KeyCode.Return))
+        {
+            machine.ChangeState(stIdleOnGround);
+        }
+    }
+
+    private void Logic_LedgeClimb()
+    {
+        SetVelocityXY(0.0f, 0.0f);
+    }
+
+    private void End_LedgeClimb()
+    {
+        transform.position = ledgeTeleportPos;
+
+        canUpdateLookingDirection = true;
+        canCheckLedge = true;
+    }
+    #endregion
+
+    #region Implement State; stJumpOnGround
+    private void Enter_JumpOnGround()
+    {
+        leftJumpOnGroundCount--;
+        leftJumpOnGroundFrame = jumpOnGroundFrame;
+    }
+
+    private void Input_JumpOnGround()
+    {
+        if(isHitCeil || leftJumpOnGroundFrame == 0)
+        {
+            machine.ChangeState(stFreeFall);
+        }
+        else if(inputData.xInput == lookingDirection && isHitLedge)
+        {
+            machine.ChangeState(stLedgeClimb);
+        }
+    }
+
+    private void Logic_JumpOnGround()
+    {
+        if(leftJumpOnGroundFrame > 0)
+            leftJumpOnGroundFrame--;
+
+        float vx = inputData.xInput * walkSpeed;
+        float vy = jumpOnGroundSpeed * jumpOnGroundGraph[leftJumpOnGroundFrame];
+
+        SetVelocityXY(vx, vy);
+    }
+
+    private void End_JumpOnGround()
+    {
+        leftJumpOnGroundFrame = 0;
+    }
+    #endregion
+
+    #region Implement State; stJumpDown
+    private void Enter_JumpDown()
+    {
+        canCheckGround = false;
+        canCheckLedge = false;
+        canCheckThroughableGroundToUp = false;
+
+        currentJumpDownGround = sitThroughableGround.collider;
+        leftJumpDownFrame = jumpDownFrame;
+
+        IgnoreCollision(currentJumpDownGround);
+    }
+
+    private void Input_JumpDown()
+    {
+        if(currentJumpDownGround == null || sitThroughableGround.collider != currentJumpDownGround)
+        {
+            machine.ChangeState(stFreeFall);
+        }
+    }
+
+    private void Logic_JumpDown()
+    {
+        RaycastHit2D hit;
+        CheckThroughableToDown(out hit);
+        currentJumpDownGround = hit.collider;
+
+        if(leftJumpDownFrame > 0)
+        {
+            proceedFreeFallFrame = 0;
+            leftJumpDownFrame--;
+
+            float vx = 0.0f;
+            float vy = jumpDownSpeed * jumpDownGraph[leftJumpDownFrame];
+
+            SetVelocityXY(vx, vy);
+        }
+        else
+        {
+            if(proceedFreeFallFrame < freeFallFrame)
+                proceedFreeFallFrame++;
+
+            float vx = 0.0f;
+            float vy = -maxFreeFallSpeed * freeFallGraph[proceedFreeFallFrame - 1];
+
+            SetVelocityXY(vx, vy);
+        }
+    }
+
+    private void End_JumpDown()
+    {
+        AcceptCollision(sitThroughableGround.collider);
+
+        canCheckGround = true;
+        canCheckLedge = true;
+        canCheckThroughableGroundToUp = true;
+        currentJumpDownGround = null;
+    }
+    #endregion
+
+    #region Implement State; stRoll
+    private void Logic_Roll()
+    {
+
+    }
+    #endregion
+
+    #region Implement State; stJumpOnAir
+    private void Logic_JumpOnAir()
+    {
+
+    }
+    #endregion
+
+    #region Implement State; stDash
+    private void Logic_Dash()
+    {
+
+    }
+    #endregion
+
+    #region Implement State; stTakeDown
+    private void Logic_TakeDown()
+    {
+
+    }
+    #endregion
+
+    #region Implement State; stJumpOnWall
+    private void Logic_JumpOnWall()
+    {
+
+    }
     #endregion
 }

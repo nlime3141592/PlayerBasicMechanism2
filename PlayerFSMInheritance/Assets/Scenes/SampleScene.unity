@@ -1396,6 +1396,116 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 4
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 90}
+--- !u!1 &1547931523
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1547931526}
+  - component: {fileID: 1547931525}
+  - component: {fileID: 1547931524}
+  m_Layer: 8
+  m_Name: ThroughableGround (1)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!61 &1547931524
+BoxCollider2D:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1547931523}
+  m_Enabled: 1
+  m_Density: 1
+  m_Material: {fileID: 0}
+  m_IsTrigger: 0
+  m_UsedByEffector: 0
+  m_UsedByComposite: 0
+  m_Offset: {x: 0, y: 0}
+  m_SpriteTilingProperty:
+    border: {x: 0, y: 0, z: 0, w: 0}
+    pivot: {x: 0.5, y: 0.5}
+    oldSize: {x: 1, y: 1}
+    newSize: {x: 1, y: 1}
+    adaptiveTilingThreshold: 0.5
+    drawMode: 0
+    adaptiveTiling: 0
+  m_AutoTiling: 0
+  serializedVersion: 2
+  m_Size: {x: 1, y: 1}
+  m_EdgeRadius: 0
+--- !u!212 &1547931525
+SpriteRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1547931523}
+  m_Enabled: 1
+  m_CastShadows: 0
+  m_ReceiveShadows: 0
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 0
+  m_RayTraceProcedural: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 10754, guid: 0000000000000000f000000000000000, type: 0}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 0
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_Sprite: {fileID: 7482667652216324306, guid: 311925a002f4447b3a28927169b83ea6, type: 3}
+  m_Color: {r: 0.427451, g: 1, b: 0.98912126, a: 1}
+  m_FlipX: 0
+  m_FlipY: 0
+  m_DrawMode: 0
+  m_Size: {x: 1, y: 1}
+  m_AdaptiveModeThreshold: 0.5
+  m_SpriteTileMode: 0
+  m_WasSpriteAssigned: 1
+  m_MaskInteraction: 0
+  m_SpriteSortPoint: 0
+--- !u!4 &1547931526
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1547931523}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: -2.55, z: 1}
+  m_LocalScale: {x: 3, y: 0.2, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 12
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1655984664
 GameObject:
   m_ObjectHideFlags: 0
@@ -1589,7 +1699,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1916226412}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: 2, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 1153664787}
@@ -1634,71 +1744,79 @@ MonoBehaviour:
   feetBox: {fileID: 1153664788}
   headBox: {fileID: 1423593882}
   bodyBox: {fileID: 1974913831}
+  canCheckGround: 1
   isDetectedGround: 0
   isHitGround: 0
+  canCheckCeil: 1
   isDetectedCeil: 0
   isHitCeil: 0
   isHitFeetSideWall: 0
   isHitHeadSideWall: 0
+  moveDirection: {x: 0, y: 0}
+  canUpdateLookingDirection: 1
   lookingDirection: 0
   isRun: 0
+  canCheckThroughableGroundToUp: 1
   proceedIdleOnGroundFrame: 0
-  longIdleTransitionFrame: 0
+  longIdleTransitionFrame: 900
   proceedSitFrame: 0
   proceedHeadUpFrame: 0
-  walkSpeed: 0
-  runSpeed: 0
-  maxFreeFallSpeed: 0
-  freeFallFrame: 0
+  walkSpeed: 3.5
+  runSpeed: 7
+  maxFreeFallSpeed: 12
+  freeFallFrame: 39
   proceedFreeFallFrame: 0
-  glidingSpeed: 0
-  glidingFrameX: 0
-  proceedGlidingFrameX: 0
-  maxWallSlidingSpeed: 0
-  wallSlidingFrame: 0
+  glidingSpeed: 2.5
+  glidingAccelFrameX: 39
+  glidingDeaccelFrameX: 26
+  proceedGlidingAccelFrameX: 0
+  leftGlidingDeaccelFrameX: 0
+  maxWallSlidingSpeed: 1.5
+  wallSlidingFrame: 26
   proceedWallSlidingFrame: 0
   canCheckLedge: 1
   isHitLedge: 0
   ledgeCornerTopPos: {x: 0, y: 0}
   ledgeCornerSidePos: {x: 0, y: 0}
+  ledgeTeleportPos: {x: 0, y: 0}
   isEndOfLedgeAnimation: 0
-  jumpOnGroundCount: 0
-  jumpOnGroundSpeed: 0
-  jumpOnGroundFrame: 0
+  jumpOnGroundCount: 1
+  jumpOnGroundSpeed: 14
+  jumpOnGroundFrame: 18
   leftJumpOnGroundCount: 0
   leftJumpOnGroundFrame: 0
-  jumpDownSpeed: 0
-  jumpDownFrame: 0
+  jumpDownSpeed: 1.5
+  jumpDownFrame: 13
   currentJumpDownGround: {fileID: 0}
   leftJumpDownFrame: 0
-  rollSpeed: 0
-  rollStartFrame: 0
-  rollInvincibilityFrame: 0
-  rollWakeUpFrame: 0
+  rollSpeed: 20
+  rollStartFrame: 6
+  rollInvincibilityFrame: 18
+  rollWakeUpFrame: 6
   leftRollStartFrame: 0
   leftRollInvincibilityFrame: 0
   leftRollWakeUpFrame: 0
-  jumpOnAirCount: 0
-  jumpOnAirSpeed: 0
-  jumpOnAirFrame: 0
+  jumpOnAirCount: 1
+  jumpOnAirSpeed: 7.5
+  jumpOnAirFrame: 20
   leftJumpOnAirCount: 0
   leftJumpOnAirFrame: 0
-  dashCount: 0
-  dashSpeed: 0
-  dashIdleFrame: 0
-  dashInvincibilityFrame: 0
+  dashCount: 1
+  dashSpeed: 20
+  dashIdleFrame: 6
+  dashInvincibilityFrame: 9
   leftDashCount: 0
   leftDashIdleFrame: 0
   leftDashInvincibilityFrame: 0
-  takeDownSpeed: 0
+  takeDownSpeed: 48
   takeDownAirIdleFrame: 0
   takeDownLandingIdleFrame: 0
   leftTakeDownAirIdleFrame: 0
   leftTakeDownLandingIdleFrame: 0
-  jumpOnWallSpeedX: 0
-  jumpOnWallSpeedY: 0
-  jumpOnWallFrame: 0
-  jumpOnWallForceFrame: 0
+  jumpOnWallSpeedX: 7
+  jumpOnWallSpeedY: 10
+  jumpOnWallFrame: 13
+  jumpOnWallForceFrame: 6
   leftJumpOnWallFrame: 0
   leftJumpOnWallForceFrame: 0
 --- !u!1 &1974913829

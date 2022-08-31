@@ -96,6 +96,14 @@ public class MovableObject : MonoBehaviour
         detected = ground;
     }
 
+    protected void CheckGroundAll(out RaycastHit2D ground, out bool detected, Vector2 origin, float detectLength)
+    {
+        int layer = LayerInfo.groundMask | LayerInfo.throughableGroundMask;
+
+        ground = Physics2D.Raycast(origin, Vector2.down, detectLength, layer);
+        detected = ground;
+    }
+
     protected void CheckCeil(out RaycastHit2D ceil, out bool detected, Vector2 origin, float detectLength)
     {
         int layer = LayerInfo.groundMask;
@@ -140,7 +148,7 @@ public class MovableObject : MonoBehaviour
 
     protected virtual void FixedUpdate()
     {
-
+        curVelocity = rigid.velocity;
     }
 
     // Entity Base Logics
@@ -167,3 +175,27 @@ public class MovableObject : MonoBehaviour
         SetVelocityXY(vx * lookingDirection, vy);
     }
 }
+
+
+/*
+#region Player State Constants
+    private const int stIdleOnGround = 0;
+    private const int stIdleLongOnGround = 1;
+    private const int stSit = 2;
+    private const int stHeadUp = 3;
+    private const int stWalk = 4;
+    private const int stRun = 5;
+    private const int stFreeFall = 6;
+    private const int stGliding = 7;
+    private const int stIdleWall = 8;
+    private const int stWallSliding = 9;
+    private const int stLedgeClimb = 10;
+    private const int stJumpOnGround = 11;
+    private const int stJumpDown = 12;
+    private const int stRoll = 13;
+    private const int stJumpOnAir = 14;
+    private const int stDash = 15;
+    private const int stTakeDown = 16;
+    private const int stJumpOnWall = 17;
+    #endregion
+*/

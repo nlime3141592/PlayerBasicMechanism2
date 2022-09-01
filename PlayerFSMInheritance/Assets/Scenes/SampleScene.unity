@@ -216,7 +216,7 @@ BoxCollider2D:
   m_GameObject: {fileID: 17495346}
   m_Enabled: 1
   m_Density: 1
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 6200000, guid: fa9f795bb97c1ad43a779a85c3ce2f04, type: 2}
   m_IsTrigger: 0
   m_UsedByEffector: 0
   m_UsedByComposite: 0
@@ -303,7 +303,7 @@ BoxCollider2D:
   m_GameObject: {fileID: 123373615}
   m_Enabled: 1
   m_Density: 1
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 6200000, guid: fa9f795bb97c1ad43a779a85c3ce2f04, type: 2}
   m_IsTrigger: 0
   m_UsedByEffector: 0
   m_UsedByComposite: 0
@@ -413,7 +413,7 @@ BoxCollider2D:
   m_GameObject: {fileID: 166664533}
   m_Enabled: 1
   m_Density: 1
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 6200000, guid: fa9f795bb97c1ad43a779a85c3ce2f04, type: 2}
   m_IsTrigger: 0
   m_UsedByEffector: 0
   m_UsedByComposite: 0
@@ -523,7 +523,7 @@ BoxCollider2D:
   m_GameObject: {fileID: 285520976}
   m_Enabled: 1
   m_Density: 1
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 6200000, guid: fa9f795bb97c1ad43a779a85c3ce2f04, type: 2}
   m_IsTrigger: 0
   m_UsedByEffector: 0
   m_UsedByComposite: 0
@@ -979,7 +979,7 @@ BoxCollider2D:
   m_GameObject: {fileID: 1111405237}
   m_Enabled: 1
   m_Density: 1
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 6200000, guid: fa9f795bb97c1ad43a779a85c3ce2f04, type: 2}
   m_IsTrigger: 0
   m_UsedByEffector: 0
   m_UsedByComposite: 0
@@ -1105,7 +1105,7 @@ BoxCollider2D:
   m_Material: {fileID: 0}
   m_IsTrigger: 0
   m_UsedByEffector: 0
-  m_UsedByComposite: 0
+  m_UsedByComposite: 1
   m_Offset: {x: 0, y: 0}
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
@@ -1146,7 +1146,7 @@ BoxCollider2D:
   m_GameObject: {fileID: 1365759903}
   m_Enabled: 1
   m_Density: 1
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 6200000, guid: fa9f795bb97c1ad43a779a85c3ce2f04, type: 2}
   m_IsTrigger: 0
   m_UsedByEffector: 0
   m_UsedByComposite: 0
@@ -1272,7 +1272,7 @@ BoxCollider2D:
   m_Material: {fileID: 0}
   m_IsTrigger: 0
   m_UsedByEffector: 0
-  m_UsedByComposite: 0
+  m_UsedByComposite: 1
   m_Offset: {x: 0, y: 0}
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
@@ -1313,7 +1313,7 @@ BoxCollider2D:
   m_GameObject: {fileID: 1531635348}
   m_Enabled: 1
   m_Density: 1
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 6200000, guid: fa9f795bb97c1ad43a779a85c3ce2f04, type: 2}
   m_IsTrigger: 0
   m_UsedByEffector: 0
   m_UsedByComposite: 0
@@ -1423,7 +1423,7 @@ BoxCollider2D:
   m_GameObject: {fileID: 1547931523}
   m_Enabled: 1
   m_Density: 1
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 6200000, guid: fa9f795bb97c1ad43a779a85c3ce2f04, type: 2}
   m_IsTrigger: 0
   m_UsedByEffector: 0
   m_UsedByComposite: 0
@@ -1724,7 +1724,7 @@ Rigidbody2D:
   m_LinearDrag: 0
   m_AngularDrag: 0.05
   m_GravityScale: 1
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 6200000, guid: fa9f795bb97c1ad43a779a85c3ce2f04, type: 2}
   m_Interpolate: 1
   m_SleepingMode: 1
   m_CollisionDetection: 1
@@ -1766,7 +1766,7 @@ MonoBehaviour:
   maxFreeFallSpeed: 12
   freeFallFrame: 39
   proceedFreeFallFrame: 0
-  glidingSpeed: 2.5
+  glidingSpeed: 0.05
   glidingAccelFrameX: 39
   glidingDeaccelFrameX: 26
   proceedGlidingAccelFrameX: 0
@@ -1781,7 +1781,7 @@ MonoBehaviour:
   ledgeTeleportPos: {x: 0, y: 0}
   isEndOfLedgeAnimation: 0
   jumpOnGroundCount: 1
-  jumpOnGroundSpeed: 14
+  jumpOnGroundSpeed: 5.5
   jumpOnGroundFrame: 18
   leftJumpOnGroundCount: 0
   leftJumpOnGroundFrame: 0
@@ -1789,17 +1789,20 @@ MonoBehaviour:
   jumpDownFrame: 13
   currentJumpDownGround: {fileID: 0}
   leftJumpDownFrame: 0
-  rollSpeed: 20
+  rollSpeed: 9.5
   rollStartFrame: 6
   rollInvincibilityFrame: 18
   rollWakeUpFrame: 6
   leftRollStartFrame: 0
   leftRollInvincibilityFrame: 0
   leftRollWakeUpFrame: 0
+  leftRollFrame: 0
   jumpOnAirCount: 1
   jumpOnAirSpeed: 7.5
+  jumpOnAirIdleFrame: 3
   jumpOnAirFrame: 20
   leftJumpOnAirCount: 0
+  leftJumpOnAirIdleFrame: 0
   leftJumpOnAirFrame: 0
   dashCount: 1
   dashSpeed: 20
@@ -1862,7 +1865,7 @@ BoxCollider2D:
   m_Material: {fileID: 0}
   m_IsTrigger: 0
   m_UsedByEffector: 0
-  m_UsedByComposite: 0
+  m_UsedByComposite: 1
   m_Offset: {x: 0, y: 0}
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
@@ -1874,7 +1877,7 @@ BoxCollider2D:
     adaptiveTiling: 0
   m_AutoTiling: 0
   serializedVersion: 2
-  m_Size: {x: 0.14, y: 0.68}
+  m_Size: {x: 0.1414, y: 0.84}
   m_EdgeRadius: 0
 --- !u!1 &2031734484
 GameObject:
@@ -1903,7 +1906,7 @@ BoxCollider2D:
   m_GameObject: {fileID: 2031734484}
   m_Enabled: 1
   m_Density: 1
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 6200000, guid: fa9f795bb97c1ad43a779a85c3ce2f04, type: 2}
   m_IsTrigger: 0
   m_UsedByEffector: 0
   m_UsedByComposite: 0

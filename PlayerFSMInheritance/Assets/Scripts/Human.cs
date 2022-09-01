@@ -139,13 +139,16 @@ public class Human : MovableObject
     public int leftRollStartFrame;
     public int leftRollInvincibilityFrame;
     public int leftRollWakeUpFrame;
+    public int leftRollFrame;
 
     // stJumpOnAir options
     public int jumpOnAirCount;
     public float jumpOnAirSpeed;
+    public int jumpOnAirIdleFrame;
     public int jumpOnAirFrame;
     private DiscreteGraph jumpOnAirGraph;
     public int leftJumpOnAirCount;
+    public int leftJumpOnAirIdleFrame;
     public int leftJumpOnAirFrame;
 
     // stDash options
@@ -231,6 +234,11 @@ public class Human : MovableObject
         {
             moveDirection.Set(1.0f, 0.0f);
         }
+    }
+
+    protected float GetMoveSpeed()
+    {
+        return isRun ? runSpeed : walkSpeed;
     }
 
     // Terrain Checker
@@ -330,14 +338,14 @@ public class Human : MovableObject
         machine.SetCallbacks(stWalk, Input_Walk, Logic_Walk, null, null);
         machine.SetCallbacks(stRun, Input_Run, Logic_Run, null, null);
         machine.SetCallbacks(stFreeFall, Input_FreeFall, Logic_FreeFall, Enter_FreeFall, null);
-        machine.SetCallbacks(stGliding, null, null, null, null);
-        machine.SetCallbacks(stIdleWall, null, null, null, null);
-        machine.SetCallbacks(stWallSliding, null, null, null, null);
+        machine.SetCallbacks(stGliding, Input_Gliding, Logic_Gliding, Enter_Gliding, null);
+        machine.SetCallbacks(stIdleWall, Input_IdleWall, Logic_IdleWall, Enter_IdleWall, End_IdleWall);
+        machine.SetCallbacks(stWallSliding, Input_WallSliding, Logic_WallSliding, Enter_WallSliding, null);
         machine.SetCallbacks(stLedgeClimb, Input_LedgeClimb, Logic_LedgeClimb, Enter_LedgeClimb, End_LedgeClimb);
         machine.SetCallbacks(stJumpOnGround, Input_JumpOnGround, Logic_JumpOnGround, Enter_JumpOnGround, End_JumpOnGround);
         machine.SetCallbacks(stJumpDown, Input_JumpDown, Logic_JumpDown, Enter_JumpDown, End_JumpDown);
-        machine.SetCallbacks(stRoll, null, null, null, null);
-        machine.SetCallbacks(stJumpOnAir, null, null, null, null);
+        machine.SetCallbacks(stRoll, Input_Roll, Logic_Roll, Enter_Roll, null);
+        machine.SetCallbacks(stJumpOnAir, Input_JumpOnAir, Logic_JumpOnAir, Enter_JumpOnAir, null);
         machine.SetCallbacks(stDash, null, null, null, null);
         machine.SetCallbacks(stTakeDown, null, null, null, null);
         machine.SetCallbacks(stJumpOnWall, null, null, null, null);
@@ -378,7 +386,9 @@ public class Human : MovableObject
         UpdateLookingDirection(inputData.xNegative, inputData.xPositive);
 
         // Terrain Checking
-        CheckGroundAll(out detectedGround, out isHitGround, feetPos, 0.04f);
+        // CheckGroundAll(out detectedGround, out isHitGround, feetPos, 0.04f);
+        CheckGroundAll(out detectedGround, out isDetectedGround, feetPos, 0.5f);
+        isHitGround = isDetectedGround && detectedGround.distance <= 0.04f;
         CheckCeil(out detectedCeil, out isHitCeil, headPos, 0.04f);
         CheckThroughableToUp(ref headThroughableGroundBefore, ref headThroughableGround);
         CheckWall(out detectedFeetSideWall, out isHitFeetSideWall, feetSidePos, 0.04f, lookingDirection);
@@ -398,6 +408,7 @@ public class Human : MovableObject
         proceedIdleOnGroundFrame = 0;
 
         leftJumpOnGroundCount = jumpOnGroundCount;
+        leftJumpOnAirCount = jumpOnAirCount;
     }
 
     private void Input_IdleOnGround()
@@ -409,6 +420,10 @@ public class Human : MovableObject
         else if(inputData.jumpDown)
         {
             machine.ChangeState(stJumpOnGround);
+        }
+        else if(inputData.dashDown)
+        {
+            machine.ChangeState(stRoll);
         }
         else if(inputData.yNegative != 0)
         {
@@ -455,6 +470,10 @@ public class Human : MovableObject
         {
             machine.ChangeState(stJumpOnGround);
         }
+        else if(inputData.dashDown)
+        {
+            machine.ChangeState(stRoll);
+        }
         else if(inputData.yNegative != 0)
         {
             machine.ChangeState(stSit);
@@ -499,6 +518,10 @@ public class Human : MovableObject
                 machine.ChangeState(stJumpOnGround);
             }
         }
+        else if(inputData.dashDown)
+        {
+            machine.ChangeState(stRoll);
+        }
         else if(inputData.yNegative == 0)
         {
             machine.ChangeState(stIdleOnGround);
@@ -530,6 +553,10 @@ public class Human : MovableObject
         {
             machine.ChangeState(stJumpOnGround);
         }
+        else if(inputData.dashDown)
+        {
+            machine.ChangeState(stRoll);
+        }
         else if(inputData.yPositive == 0)
         {
             machine.ChangeState(stIdleOnGround);
@@ -551,6 +578,14 @@ public class Human : MovableObject
         {
             machine.ChangeState(stFreeFall);
         }
+        else if(inputData.yNegative != 0)
+        {
+            machine.ChangeState(stSit);
+        }
+        else if(inputData.yPositive != 0)
+        {
+            machine.ChangeState(stHeadUp);
+        }
         else if(isRun)
         {
             machine.ChangeState(stRun);
@@ -558,6 +593,10 @@ public class Human : MovableObject
         else if(inputData.jumpDown)
         {
             machine.ChangeState(stJumpOnGround);
+        }
+        else if(inputData.dashDown)
+        {
+            machine.ChangeState(stRoll);
         }
         else if(inputData.xInput == 0)
         {
@@ -578,6 +617,14 @@ public class Human : MovableObject
         {
             machine.ChangeState(stFreeFall);
         }
+        else if(inputData.yNegative != 0)
+        {
+            machine.ChangeState(stSit);
+        }
+        else if(inputData.yPositive != 0)
+        {
+            machine.ChangeState(stHeadUp);
+        }
         else if(!isRun)
         {
             machine.ChangeState(stWalk);
@@ -585,6 +632,10 @@ public class Human : MovableObject
         else if(inputData.jumpDown)
         {
             machine.ChangeState(stJumpOnGround);
+        }
+        else if(inputData.dashDown)
+        {
+            machine.ChangeState(stRoll);
         }
         else if(inputData.xInput == 0)
         {
@@ -630,19 +681,32 @@ public class Human : MovableObject
         {
             machine.ChangeState(stIdleOnGround);
         }
+        else if(inputData.jumpDown && leftJumpOnAirCount > 0)
+        {
+            machine.ChangeState(stJumpOnAir);
+        }
         else if(inputData.xInput == lookingDirection && isHitLedge)
         {
             machine.ChangeState(stLedgeClimb);
+        }
+        else if(inputData.yPositive != 0)
+        {
+            machine.ChangeState(stGliding);
+        }
+        else if(inputData.xInput == lookingDirection && isHitFeetSideWall == lookingDirection && isHitHeadSideWall == lookingDirection && inputData.yNegative == 0)
+        {
+            machine.ChangeState(stIdleWall);
         }
     }
 
     private void Logic_FreeFall()
     {
+        // TODO: velocity.y가 0이 되는 순간 프레임을 초기화 하는 방법은 어떤가?
+
         if(proceedFreeFallFrame < freeFallFrame)
             proceedFreeFallFrame++;
 
-        float sp = 5.0f;
-        float vx = sp * inputData.xInput;
+        float vx = GetMoveSpeed() * inputData.xInput;
         float vy = -maxFreeFallSpeed * freeFallGraph[proceedFreeFallFrame - 1];
 
         SetVelocityXY(vx, vy);
@@ -650,23 +714,180 @@ public class Human : MovableObject
     #endregion
 
     #region Implement State; stGliding
+    private void Enter_Gliding()
+    {
+        // TODO: 자유낙하 프레임이 유지되듯이, x축 이동 프레임도 유지되어야 한다. 그 로직을 이 곳에 추가한다.
+        if(Mathf.Abs(currentVelocity.x) == 0.0f)
+        {
+            leftGlidingDeaccelFrameX = 0;
+            proceedGlidingAccelFrameX = 0;
+        }
+        else if(Mathf.Abs(currentVelocity.x) > GetMoveSpeed())
+        {
+            if(inputData.xInput == 0)
+            {
+                leftGlidingDeaccelFrameX = glidingDeaccelFrameX;
+                proceedGlidingAccelFrameX = 0;
+            }
+            else
+            {
+                leftGlidingDeaccelFrameX = 0;
+                proceedGlidingAccelFrameX = glidingAccelFrameX;
+            }
+        }
+        else
+        {
+            if(inputData.xInput == 0)
+            {
+                for(int i = 0; i < glidingDeaccelFrameX; i++)
+                {
+                    if(Mathf.Abs(currentVelocity.x) >= glidingDeaccelGraphX[i])
+                    {
+                        leftGlidingDeaccelFrameX = i;
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                for(int i = 0; i < glidingAccelFrameX; i++)
+                {
+                    if(Mathf.Abs(currentVelocity.x) >= glidingAccelGraphX[i])
+                    {
+                        proceedGlidingAccelFrameX = i;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    private void Input_Gliding()
+    {
+        if(isHitGround)
+        {
+            machine.ChangeState(stIdleOnGround);
+        }
+        else if(inputData.jumpDown && leftJumpOnAirCount > 0)
+        {
+            machine.ChangeState(stJumpOnAir);
+        }
+        else if(inputData.xInput == lookingDirection && isHitLedge)
+        {
+            machine.ChangeState(stLedgeClimb);
+        }
+        else if(inputData.yPositive == 0)
+        {
+            machine.ChangeState(stFreeFall);
+        }
+        else if(inputData.xInput == lookingDirection && isHitFeetSideWall == lookingDirection && isHitHeadSideWall == lookingDirection && inputData.yNegative == 0)
+        {
+            machine.ChangeState(stIdleWall);
+        }
+    }
+
     private void Logic_Gliding()
     {
+        float vx = 0.0f;
+        float vy = -glidingSpeed;
 
+        if(currentVelocity.x * inputData.xInput < 0.0f)
+        {
+            vx = 0.0f;
+            proceedGlidingAccelFrameX = 0;
+            leftGlidingDeaccelFrameX = 0;
+        }
+        else if(inputData.xInput == 0)
+        {
+            if(leftGlidingDeaccelFrameX > 0)
+                leftGlidingDeaccelFrameX--;
+
+            proceedGlidingAccelFrameX = 0;
+
+            vx = GetMoveSpeed() * glidingDeaccelGraphX[leftGlidingDeaccelFrameX] * lookingDirection;
+        }
+        else if(inputData.xInput != 0)
+        {
+            if(proceedGlidingAccelFrameX < glidingAccelFrameX)
+                proceedGlidingAccelFrameX++;
+
+            leftGlidingDeaccelFrameX = glidingDeaccelFrameX;
+
+            vx = GetMoveSpeed() * glidingAccelGraphX[proceedGlidingAccelFrameX - 1] * lookingDirection;
+        }
+
+        SetVelocityXY(vx, vy);
     }
     #endregion
 
     #region Implement State; stIdleWall
+    private void Enter_IdleWall()
+    {
+        DisableGravity();
+    }
+
+    private void Input_IdleWall()
+    {
+        if(isDetectedGround || isHitFeetSideWall == 0 || isHitHeadSideWall == 0 || inputData.xNegDown)
+        {
+            machine.ChangeState(stFreeFall);
+        }
+        else if(inputData.xInput == 0)
+        {
+            machine.ChangeState(stWallSliding);
+        }
+        else if(inputData.jumpDown)
+        {
+            machine.ChangeState(stJumpOnWall);
+        }
+    }
+
     private void Logic_IdleWall()
     {
         SetVelocityXY(0.0f, 0.0f);
     }
+
+    private void End_IdleWall()
+    {
+        EnableGravity();
+    }
     #endregion
 
     #region Implement State; stWallSliding
+    private void Enter_WallSliding()
+    {
+        proceedWallSlidingFrame = 0;
+    }
+
+    private void Input_WallSliding()
+    {
+        if(isHitGround)
+        {
+            machine.ChangeState(stIdleOnGround);
+        }
+        else if(isDetectedGround || isHitFeetSideWall == 0 || isHitHeadSideWall == 0 || inputData.yNegDown)
+        {
+            machine.ChangeState(stFreeFall);
+        }
+        else if(inputData.xInput == lookingDirection && isHitFeetSideWall == lookingDirection && isHitHeadSideWall == lookingDirection && inputData.yNegative == 0)
+        {
+            machine.ChangeState(stIdleWall);
+        }
+        else if(inputData.jumpDown)
+        {
+            machine.ChangeState(stJumpOnWall);
+        }
+    }
+
     private void Logic_WallSliding()
     {
+        if(proceedWallSlidingFrame < wallSlidingFrame)
+            proceedWallSlidingFrame++;
 
+        float vx = 0.0f;
+        float vy = -maxWallSlidingSpeed * wallSlidingGraph[proceedWallSlidingFrame - 1];
+
+        SetVelocityXY(vx, vy);
     }
     #endregion
 
@@ -738,6 +959,14 @@ public class Human : MovableObject
         {
             machine.ChangeState(stLedgeClimb);
         }
+        else if(inputData.xInput == lookingDirection && isHitFeetSideWall == lookingDirection && isHitHeadSideWall == lookingDirection && inputData.yNegative == 0)
+        {
+            machine.ChangeState(stIdleWall);
+        }
+        else if(inputData.jumpDown && leftJumpOnAirCount > 0)
+        {
+            machine.ChangeState(stJumpOnAir);
+        }
     }
 
     private void Logic_JumpOnGround()
@@ -745,7 +974,7 @@ public class Human : MovableObject
         if(leftJumpOnGroundFrame > 0)
             leftJumpOnGroundFrame--;
 
-        float vx = inputData.xInput * walkSpeed;
+        float vx = inputData.xInput * GetMoveSpeed();
         float vy = jumpOnGroundSpeed * jumpOnGroundGraph[leftJumpOnGroundFrame];
 
         SetVelocityXY(vx, vy);
@@ -818,16 +1047,131 @@ public class Human : MovableObject
     #endregion
 
     #region Implement State; stRoll
+    private void Enter_Roll()
+    {
+        EnableGravity();
+
+        leftRollStartFrame = rollStartFrame;
+        leftRollInvincibilityFrame = 0;
+        leftRollWakeUpFrame = 0;
+        leftRollFrame = rollStartFrame + rollInvincibilityFrame + rollWakeUpFrame;
+    }
+
+    private void Input_Roll()
+    {
+        if(!isDetectedGround)
+        {
+            machine.ChangeState(stFreeFall);
+        }
+        else if(inputData.jumpDown && leftJumpOnGroundCount > 0 && leftRollFrame < rollInvincibilityFrame + rollWakeUpFrame)
+        {
+            machine.ChangeState(stJumpOnGround);
+        }
+        else if(inputData.xInput != 0 && leftRollFrame < rollWakeUpFrame)
+        {
+            if(isRun)
+                machine.ChangeState(stRun);
+            else
+                machine.ChangeState(stWalk);
+        }
+        else if(leftRollFrame == 0)
+        {
+            if(inputData.yNegative != 0)
+                machine.ChangeState(stSit);
+            else
+                machine.ChangeState(stIdleOnGround);
+        }
+    }
+
     private void Logic_Roll()
     {
+        if(leftRollStartFrame > 0)
+        {
+            leftRollStartFrame--;
 
+            if(leftRollStartFrame == 0)
+                leftRollInvincibilityFrame = rollInvincibilityFrame;
+        }
+        else if(leftRollInvincibilityFrame > 0)
+        {
+            leftRollInvincibilityFrame--;
+
+            if(leftRollInvincibilityFrame == 0)
+                leftRollWakeUpFrame = rollWakeUpFrame;
+        }
+        else if(leftRollWakeUpFrame > 0)
+        {
+            leftRollWakeUpFrame--;
+        }
+
+        if(leftRollFrame > 0)
+            leftRollFrame--;
+
+        Logic_MoveOnGround(moveDirection, rollSpeed * rollGraph[leftRollFrame], lookingDirection);
     }
     #endregion
 
     #region Implement State; stJumpOnAir
+    private void Enter_JumpOnAir()
+    {
+        leftJumpOnAirCount--;
+
+        leftJumpOnAirIdleFrame = jumpOnAirIdleFrame;
+        leftJumpOnAirFrame = 0;
+    }
+
+    private void Input_JumpOnAir()
+    {
+        if(isHitCeil)
+        {
+            machine.ChangeState(stFreeFall);
+        }
+        else if(leftJumpOnAirIdleFrame == 0 && leftJumpOnAirFrame == 0)
+        {
+            if(inputData.yPositive == 0)
+                machine.ChangeState(stFreeFall);
+            else
+                machine.ChangeState(stGliding);
+        }
+        else if(inputData.jumpDown)
+        {
+            if(leftJumpOnAirCount > 0)
+                machine.RestartState();
+            else if(inputData.yNegative != 0)
+                machine.ChangeState(stTakeDown);
+        }
+        else if(inputData.dashDown && leftDashCount > 0)
+        {
+            machine.ChangeState(stDash);
+        }
+        else if(inputData.xInput == lookingDirection && isHitLedge)
+        {
+            machine.ChangeState(stLedgeClimb);
+        }
+    }
+
     private void Logic_JumpOnAir()
     {
+        if(leftJumpOnAirIdleFrame > 0)
+        {
+            leftJumpOnAirIdleFrame--;
 
+            SetVelocityXY(0.0f, 0.0f);
+
+            if(leftJumpOnAirIdleFrame == 0)
+                leftJumpOnAirFrame = jumpOnAirFrame;
+
+            return;
+        }
+        else if(leftJumpOnAirFrame > 0)
+        {
+            leftJumpOnAirFrame--;
+        }
+
+        float vx = inputData.xInput * GetMoveSpeed();
+        float vy = jumpOnAirSpeed * jumpOnAirGraph[leftJumpOnAirFrame];
+
+        SetVelocityXY(vx, vy);
     }
     #endregion
 

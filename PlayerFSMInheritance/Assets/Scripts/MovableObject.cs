@@ -139,6 +139,9 @@ public class MovableObject : MonoBehaviour
     protected virtual void Start()
     {
         rigid = GetComponent<Rigidbody2D>();
+
+        tempVelocity = Vector2.zero;
+        curVelocity = Vector2.zero;
     }
 
     protected virtual void Update()

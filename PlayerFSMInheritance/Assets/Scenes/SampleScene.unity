@@ -2972,7 +2972,7 @@ MonoBehaviour:
   moveDirection: {x: 0, y: 0}
   canUpdateLookingDirection: 1
   lookingDirection: 0
-  isRun: 0
+  isRun: 1
   canCheckThroughableGroundToUp: 1
   proceedIdleOnGroundFrame: 0
   preInputFrame_IdleOnGround: 6
@@ -2981,8 +2981,8 @@ MonoBehaviour:
   proceedHeadUpFrame: 0
   walkSpeed: 3.5
   runSpeed: 7
-  maxFreeFallSpeed: 12
-  freeFallFrame: 39
+  maxFreeFallSpeed: 24
+  freeFallFrame: 18
   proceedFreeFallFrame: 0
   preInputFrame_FreeFall: 6
   glidingSpeed: 0.05
@@ -3001,8 +3001,8 @@ MonoBehaviour:
   ledgeTeleportPos: {x: 0, y: 0}
   isEndOfLedgeAnimation: 0
   jumpOnGroundCount: 1
-  jumpOnGroundSpeed: 5.5
-  jumpOnGroundFrame: 18
+  jumpOnGroundSpeed: 20
+  jumpOnGroundFrame: 20
   leftJumpOnGroundCount: 0
   leftJumpOnGroundFrame: 0
   isCancelOfJumpOnGround: 0

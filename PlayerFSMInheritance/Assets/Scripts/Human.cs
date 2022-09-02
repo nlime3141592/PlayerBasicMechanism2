@@ -522,9 +522,10 @@ public class Human : MovableObject
         leftDashCount = dashCount;
 
         // 선입력 확인
-        uint mask_jumpOnGround = 0x0001;
-        preInputPressing = 0x0000;
-        preInputDown = 0x0000;
+        uint mask_jumpOnGround      = 0b00000000000000000000000000000001;
+        uint mask_roll              = 0b00000000000000000000000000000010; // NOTE: 미구현
+        preInputPressing = 0b00000000000000000000000000000000;
+        preInputDown = 0b00000000000000000000000000000000;
 
         for(int i = 0; i < preInputFrame_IdleOnGround; i++)
         {
@@ -846,9 +847,9 @@ public class Human : MovableObject
         }
 
         // 선입력
-        uint mask_jumpOnAir = 0x0001;
-        preInputPressing = 0x0000;
-        preInputDown = 0x0000;
+        uint mask_jumpOnAir = 0b00000000000000000000000000000001;
+        preInputPressing = 0b00000000000000000000000000000000;
+        preInputDown = 0b00000000000000000000000000000000;
 
         for(int i = 0; i < preInputFrame_FreeFall; i++)
         {
@@ -1033,11 +1034,13 @@ public class Human : MovableObject
     private void Enter_IdleOnWall()
     {
         DisableGravity();
+        leftJumpOnAirCount = jumpOnAirCount;
+        leftDashCount = dashCount;
 
         // 선입력
-        uint mask_jumpOnWall = 0x0001;
-        preInputPressing = 0x0000;
-        preInputDown = 0x0000;
+        uint mask_jumpOnWall = 0b00000000000000000000000000000001;
+        preInputPressing = 0b00000000000000000000000000000000;
+        preInputDown = 0b00000000000000000000000000000000;
 
         for(int i = 0; i < preInputFrame_FreeFall; i++)
         {
@@ -1177,10 +1180,16 @@ public class Human : MovableObject
 
         leftJumpOnGroundCount--;
         leftJumpOnGroundFrame = jumpOnGroundFrame;
+        isCancelOfJumpOnGround = false;
     }
 
     private void Input_JumpOnGround()
     {
+        if(inputData.jumpUp && !isCancelOfJumpOnGround)
+        {
+            leftJumpOnGroundFrame /= 2;
+        }
+
         if(isHitCeil || leftJumpOnGroundFrame == 0)
         {
             if(inputData.yPositive == 0)
@@ -1366,10 +1375,16 @@ public class Human : MovableObject
 
         leftJumpOnAirIdleFrame = jumpOnAirIdleFrame;
         leftJumpOnAirFrame = 0;
+        isCancelOfJumpOnAir = false;
     }
 
     private void Input_JumpOnAir()
     {
+        if(inputData.jumpUp && !isCancelOfJumpOnAir)
+        {
+            leftJumpOnAirFrame /= 2;
+        }
+
         if((leftJumpOnAirIdleFrame == 0 && leftJumpOnAirFrame == 0) || isHitCeil)
         {
             if(inputData.yPositive == 0)
@@ -1492,7 +1507,7 @@ public class Human : MovableObject
     {
         if(leftTakeDownAirIdleFrame == 0 && leftTakeDownLandingIdleFrame == 0)
         {
-            machine.ChangeState(stIdleLongOnGround);
+            machine.ChangeState(stIdleOnGround);
         }
         else if(isLandingAfterTakeDown && !isHitGround)
         {

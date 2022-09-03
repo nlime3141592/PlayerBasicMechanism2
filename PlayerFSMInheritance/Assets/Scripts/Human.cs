@@ -1,7 +1,11 @@
 using System;
-using System.IO;
+using System.Diagnostics;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
+
 using UnityEngine;
 
 // Player class
@@ -430,7 +434,7 @@ public class Human : MovableObject
         InitGraphs();
 
         // 파일 생성하는 기능
-        // FileCreator.Initialize();
+        FileCreator.Initialize();
     }
 
     private void InitGraphs()
@@ -455,8 +459,7 @@ public class Human : MovableObject
         inputData.Copy(InputHandler.data);
 
         machine.UpdateInput();
-
-        Debug.Log(string.Format("current state: {0}", machine.state));
+        // UnityEngine.Debug.Log(string.Format("current state: {0}", machine.state));
     }
 
     protected override void FixedUpdate()
@@ -523,7 +526,7 @@ public class Human : MovableObject
 
         // 선입력 확인
         uint mask_jumpOnGround      = 0b00000000000000000000000000000001;
-        uint mask_roll              = 0b00000000000000000000000000000010; // NOTE: 미구현
+        uint mask_roll              = 0b00000000000000000000000000000010;
         preInputPressing = 0b00000000000000000000000000000000;
         preInputDown = 0b00000000000000000000000000000000;
 
@@ -535,9 +538,15 @@ public class Human : MovableObject
                 preInputPressing |= mask_jumpOnGround;
             if((preInputDown & mask_jumpOnGround) == 0 && preInputData.jumpDown)
                 preInputDown |= mask_jumpOnGround;
+            if((preInputPressing & mask_roll) == 0 && preInputData.dashPressing)
+                preInputPressing |= mask_roll;
+            if((preInputDown & mask_roll) == 0 && preInputData.dashDown)
+                preInputDown |= mask_roll;
         }
 
-        if((preInputDown & mask_jumpOnGround) != 0 && (preInputPressing & mask_jumpOnGround) != 0 && leftJumpOnGroundCount > 0)
+        if((preInputDown & mask_roll) != 0 && (preInputPressing & mask_roll) != 0)
+            machine.ChangeState(stRoll);
+        else if((preInputDown & mask_jumpOnGround) != 0 && (preInputPressing & mask_jumpOnGround) != 0 && leftJumpOnGroundCount > 0)
             machine.ChangeState(stJumpOnGround);
     }
 
@@ -1621,37 +1630,49 @@ public class Human : MovableObject
     }
     #endregion
 
-
     #region FILE_INPUT
     public void ApplyFile()
     {
         string path = Application.persistentDataPath + "/DataTable.txt";
 
-        using(StreamReader stream = new StreamReader(path))
+        Action loadFunction = () =>
         {
-            while(!stream.EndOfStream)
+            LoadData(path);
+        };
+
+        Thread loader = new Thread(new ThreadStart(loadFunction));
+
+        try
+        {
+            loader.Start();
+        }
+        catch(Exception)
+        {
+            Application.Quit();
+        }
+
+        transform.position = new Vector3(-15.0f, 4.0f, 0.0f);
+    }
+
+    private void LoadData(string path)
+    {
+        using(FileStream stream = new FileStream(path, FileMode.Open))
+        using(StreamReader reader = new StreamReader(stream))
+        {
+            while(!reader.EndOfStream)
             {
-                string line = stream.ReadLine();
+                string line = reader.ReadLine().Split('#')[0].Replace(" ", "");
+
                 if(line == "")
                     continue;
 
-                // string message = line.Replace(" ", "").Split('#')[0];
-                string message = line.Replace(" ", "");
-                Debug.Log(message);
-                string[] token = message.Split(':');
-                foreach(string s in token)
-                {
-                    Debug.Log("\t" + s);
-                }
-                // SwitchFileData(token[0], token[1]);
+                string[] token = line.Split(':');
+
+                SwitchFileData(token[0], token[1]);
             }
         }
 
-        // 값 로드
-        // 값 저장
         InitGraphs();
-
-        transform.position = new Vector3(-15.0f, 4.0f, 0.0f);
     }
 
     private void SwitchFileData(string token_name, string token_value)
@@ -1779,6 +1800,17 @@ public class Human : MovableObject
     private int valueToInt(string str)
     {
         return int.Parse(str);
+    }
+
+    public void OpneExplorer()
+    {
+        string path = Application.persistentDataPath.Replace("/", "\\");
+
+        Process process = new System.Diagnostics.Process();
+        process.StartInfo = new ProcessStartInfo("explorer.exe", path);
+        process.StartInfo.UseShellExecute = true;
+        process.StartInfo.Verb = "runas";
+        process.Start();
     }
     #endregion
 }

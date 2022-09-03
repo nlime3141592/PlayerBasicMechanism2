@@ -13,7 +13,7 @@ public static class FileCreator
             using(FileStream stream = new FileStream(path, FileMode.Create))
             using(StreamWriter writer = new StreamWriter(stream))
             {
-
+/*
                 writer.Write(
 @"isRun: false
 longIdleTransitionFrame: 900
@@ -62,7 +62,8 @@ jumpOnWallSpeedY: 10
 jumpOnWallFrame: 13
 jumpOnWallForceFrame: 6"
                 );
-/*
+                */
+
                 writer.Write(
 @"# 플레이어의 이동 테스트를 위해 다양한 옵션을 이 파일에서 조정할 수 있습니다.
 # 이 파일을 저장하고, 프로그램 화면의 데이터테이블 파일 경로에 본 파일을 DataTable.txt (대소문자 구분함)로 저장하세요.
@@ -126,7 +127,7 @@ jumpOnWallSpeedY: 10
 jumpOnWallFrame: 13
 jumpOnWallForceFrame: 6"
                 );
-*/
+
             }
         }
     }

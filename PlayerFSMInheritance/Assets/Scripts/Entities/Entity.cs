@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 // Entity class
-public class MovableObject : MonoBehaviour
+public class Entity : MonoBehaviour
 {
     // Unity Components
     public BoxCollider2D feetBox;

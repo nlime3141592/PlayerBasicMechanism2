@@ -5,7 +5,7 @@ using UnityEngine.UI;
 
 public class StateViewer : MonoBehaviour
 {
-    public Human human;
+    public Player human;
     private Text comp;
     
     void Start()

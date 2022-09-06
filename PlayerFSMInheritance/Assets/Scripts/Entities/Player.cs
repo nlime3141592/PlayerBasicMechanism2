@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 
 // Player class
-public class Human : MovableObject
+public class Player : Entity
 {
     #region Components
     private SpriteRenderer spRenderer;

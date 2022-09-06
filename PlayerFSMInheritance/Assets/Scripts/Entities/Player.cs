@@ -45,12 +45,15 @@ public class Player : Entity
     protected Vector2 leftLedgeHangingPos;
     protected Vector2 rightLedgeHangingPos;
 
-    public bool canCheckLedgeHanging = true;
+    public bool canCheckLedgeHangingGround = true;
+    public bool canCheckLedgeHangingThroughableGround = true;
     protected RaycastHit2D leftHangingGround;
     protected RaycastHit2D rightHangingGround;
     public bool isHangingOnGround;
 
     public bool canCheckGround = true;
+    public bool canCheckGroundBasic = true;
+    public bool canCheckGroundThroughable = true;
     public RaycastHit2D detectedGround;
     public bool isDetectedGround;
     public bool isHitGround;
@@ -283,19 +286,15 @@ public class Player : Entity
 
     protected void CheckLedgeHanging()
     {
-        if(!canCheckLedgeHanging)
-        {
-            leftHangingGround = default(RaycastHit2D);
-            rightHangingGround = default(RaycastHit2D);
-            isHangingOnGround = false;
-            return;
-        }
-
         leftLedgeHangingPos.Set(feetBox.bounds.min.x, feetBox.bounds.center.y);
         rightLedgeHangingPos.Set(feetBox.bounds.max.x, feetBox.bounds.center.y);
 
         float detectLength = 0.04f;
-        int layer = LayerInfo.groundMask | LayerInfo.throughableGroundMask;
+        int layer = 0;
+        if(canCheckLedgeHangingGround)
+            layer |= LayerInfo.groundMask;
+        if(canCheckLedgeHangingThroughableGround)
+            layer |= LayerInfo.throughableGroundMask;
 
         leftHangingGround = Physics2D.Raycast(leftLedgeHangingPos, Vector2.down, detectLength, layer);
         rightHangingGround = Physics2D.Raycast(rightLedgeHangingPos, Vector2.down, detectLength, layer);
@@ -354,7 +353,8 @@ public class Player : Entity
 
             canCheckGround = true;
             canCheckCeil = true;
-            canCheckLedgeHanging = true;
+            canCheckLedgeHangingGround = true;
+            canCheckLedgeHangingThroughableGround = true;
             return;
         }
 
@@ -385,13 +385,15 @@ public class Player : Entity
         {
             canCheckGround = false;
             canCheckCeil = false;
-            canCheckLedgeHanging = false;
+            canCheckLedgeHangingGround = true;
+            canCheckLedgeHangingThroughableGround = false;
         }
         else
         {
             canCheckGround = true;
             canCheckCeil = true;
-            canCheckLedgeHanging = true;
+            canCheckLedgeHangingGround = true;
+            canCheckLedgeHangingThroughableGround = true;
         }
     }
 
@@ -480,8 +482,27 @@ public class Player : Entity
 
         if(canCheckGround)
         {
-            CheckGroundAll(out detectedGround, out isDetectedGround, feetPos, 0.5f);
-            isHitGround = isDetectedGround && detectedGround.distance <= 0.04f;
+            if(canCheckGroundBasic && canCheckGroundThroughable)
+            {
+                CheckGroundAll(out detectedGround, out isDetectedGround, feetPos, 0.5f);
+                isHitGround = isDetectedGround && detectedGround.distance <= 0.04f;
+            }
+            else if(canCheckGroundBasic && !canCheckGroundThroughable)
+            {
+                CheckGroundBasic(out detectedGround, out isDetectedGround, feetPos, 0.5f);
+                isHitGround = isDetectedGround && detectedGround.distance <= 0.04f;
+            }
+            else if(!canCheckGroundBasic && canCheckGroundThroughable)
+            {
+                CheckGroundThroughable(out detectedGround, out isDetectedGround, feetPos, 0.5f);
+                isHitGround = isDetectedGround && detectedGround.distance <= 0.04f;
+            }
+            else
+            {
+                detectedGround = default(RaycastHit2D);
+                isDetectedGround = false;
+                isHitGround = false;
+            }
         }
         else
         {
@@ -1245,19 +1266,18 @@ public class Player : Entity
     {
         EnableGravity();
 
-        canCheckGround = false;
+        canCheckGroundThroughable = false;
         canCheckLedge = false;
-        canCheckThroughableGroundToUp = false;
-
         currentJumpDownGround = sitThroughableGround.collider;
-        leftJumpDownFrame = jumpDownFrame;
+        sitThroughableGround = default(RaycastHit2D);
 
+        leftJumpDownFrame = jumpDownFrame;
         IgnoreCollision(currentJumpDownGround);
     }
 
     private void Input_JumpDown()
     {
-        if(currentJumpDownGround == null || sitThroughableGround.collider != currentJumpDownGround)
+        if(headThroughableGround && headThroughableGround.collider == currentJumpDownGround && headThroughableGround.distance >= 0.1f)
         {
             machine.ChangeState(stFreeFall);
         }
@@ -1265,10 +1285,6 @@ public class Player : Entity
 
     private void Logic_JumpDown()
     {
-        RaycastHit2D hit;
-        CheckThroughableToDown(out hit);
-        currentJumpDownGround = hit.collider;
-
         if(leftJumpDownFrame > 0)
         {
             proceedFreeFallFrame = 0;
@@ -1293,11 +1309,8 @@ public class Player : Entity
 
     private void End_JumpDown()
     {
-        AcceptCollision(sitThroughableGround.collider);
-
-        canCheckGround = true;
+        canCheckGroundThroughable = true;
         canCheckLedge = true;
-        canCheckThroughableGroundToUp = true;
         currentJumpDownGround = null;
     }
     #endregion

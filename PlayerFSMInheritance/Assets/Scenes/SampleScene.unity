@@ -352,9 +352,10 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 108898215}
+  - component: {fileID: 108898217}
   - component: {fileID: 108898216}
   m_Layer: 0
-  m_Name: InputManager
+  m_Name: Public Managers
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -372,7 +373,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 1
+  m_RootOrder: 5
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &108898216
 MonoBehaviour:
@@ -384,6 +385,18 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: cfde65bf945727a41a3bc1cf20a323b7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &108898217
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 108898214}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ee6e61c5fdc2e6c4ebe9df7c966948ff, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!1 &123373615
@@ -2359,8 +2372,8 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 1916226416}
-        m_TargetAssemblyTypeName: Human, Assembly-CSharp
-        m_MethodName: OpneExplorer
+        m_TargetAssemblyTypeName: Player, Assembly-CSharp
+        m_MethodName: OpenExplorer
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -2610,7 +2623,7 @@ RectTransform:
   - {fileID: 2054736246}
   - {fileID: 826497250}
   m_Father: {fileID: 0}
-  m_RootOrder: 4
+  m_RootOrder: 3
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
@@ -2791,7 +2804,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 5
+  m_RootOrder: 4
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1907297477
 GameObject:
@@ -2971,7 +2984,7 @@ Transform:
   - {fileID: 1423593881}
   - {fileID: 1974913830}
   m_Father: {fileID: 0}
-  m_RootOrder: 2
+  m_RootOrder: 1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!50 &1916226415
 Rigidbody2D:
@@ -3009,9 +3022,12 @@ MonoBehaviour:
   feetBox: {fileID: 1153664788}
   headBox: {fileID: 1423593882}
   bodyBox: {fileID: 1974913831}
-  canCheckLedgeHanging: 1
+  canCheckLedgeHangingGround: 1
+  canCheckLedgeHangingThroughableGround: 1
   isHangingOnGround: 0
   canCheckGround: 1
+  canCheckGroundBasic: 1
+  canCheckGroundThroughable: 1
   isDetectedGround: 0
   isHitGround: 0
   canCheckCeil: 1
@@ -3454,5 +3470,5 @@ Transform:
   - {fileID: 340952578}
   - {fileID: 1462089297}
   m_Father: {fileID: 0}
-  m_RootOrder: 3
+  m_RootOrder: 2
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}

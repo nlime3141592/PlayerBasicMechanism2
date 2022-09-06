@@ -37,6 +37,7 @@ public class Player : Entity
     #endregion
 
     // Entity Physics
+    private Vector2 initialPosition;
     protected Vector2 feetPos;
     protected Vector2 headPos;
     protected Vector2 bodyPos;
@@ -409,6 +410,9 @@ public class Player : Entity
     protected override void Start()
     {
         base.Start();
+        this.CheckDataTable(Application.persistentDataPath + "/DataTable.txt");
+
+        initialPosition = transform.position;
 
         spRenderer = GetComponent<SpriteRenderer>();
 
@@ -434,12 +438,9 @@ public class Player : Entity
         machine.SetCallbacks(stJumpOnWall, Input_JumpOnWall, Logic_JumpOnWall, Enter_JumpOnWall, null);
 
         InitGraphs();
-
-        // 파일 생성하는 기능
-        FileCreator.Initialize();
     }
 
-    private void InitGraphs()
+    public void InitGraphs()
     {
         freeFallGraph = new DiscreteLinearGraph(freeFallFrame);
         glidingAccelGraphX = new DiscreteLinearGraph(glidingAccelFrameX);
@@ -1650,180 +1651,27 @@ public class Player : Entity
 
         Action loadFunction = () =>
         {
-            LoadData(path);
+            this.LoadDataTable(path);
         };
 
-        Thread loader = new Thread(new ThreadStart(loadFunction));
+        Thread loadThread = new Thread(new ThreadStart(loadFunction));
 
         try
         {
-            loader.Start();
+            loadThread.Start();
         }
         catch(Exception)
         {
-            Application.Quit();
+            UnityWinAPI.Exit();
         }
 
-        transform.position = new Vector3(-15.0f, 4.0f, 0.0f);
+        transform.position = initialPosition;
     }
 
-    private void LoadData(string path)
-    {
-        using(FileStream stream = new FileStream(path, FileMode.Open))
-        using(StreamReader reader = new StreamReader(stream))
-        {
-            while(!reader.EndOfStream)
-            {
-                string line = reader.ReadLine().Split('#')[0].Replace(" ", "");
-
-                if(line == "")
-                    continue;
-
-                string[] token = line.Split(':');
-
-                SwitchFileData(token[0], token[1]);
-            }
-        }
-
-        InitGraphs();
-    }
-
-    private void SwitchFileData(string token_name, string token_value)
-    {
-        switch(token_name)
-        {
-            case "isRun":
-                isRun = valueToBool(token_value);
-                break;
-            case "longIdleTransitionFrame":
-                longIdleTransitionFrame = valueToInt(token_value);
-                break;
-            case "walkSpeed":
-                walkSpeed = valueToFloat(token_value);
-                break;
-            case "runSpeed":
-                runSpeed = valueToFloat(token_value);
-                break;
-            case "maxFreeFallSpeed":
-                maxFreeFallSpeed = valueToFloat(token_value);
-                break;
-            case "freeFallFrame":
-                freeFallFrame = valueToInt(token_value);
-                break;
-            case "glidingSpeed":
-                glidingSpeed = valueToFloat(token_value);
-                break;
-            case "glidingAccelFrameX":
-                glidingAccelFrameX = valueToInt(token_value);
-                break;
-            case "glidingDeaccelFrameX":
-                glidingDeaccelFrameX = valueToInt(token_value);
-                break;
-            case "maxWallSlidingSpeed":
-                maxWallSlidingSpeed = valueToFloat(token_value);
-                break;
-            case "wallSlidingFrame":
-                wallSlidingFrame = valueToInt(token_value);
-                break;
-            case "jumpOnGroundCount":
-                jumpOnGroundCount = valueToInt(token_value);
-                break;
-            case "jumpOnGroundSpeed":
-                jumpOnGroundSpeed = valueToFloat(token_value);
-                break;
-            case "jumpOnGroundFrame":
-                jumpOnGroundFrame = valueToInt(token_value);
-                break;
-            case "jumpDownSpeed":
-                jumpDownSpeed = valueToFloat(token_value);
-                break;
-            case "jumpDownFrame":
-                jumpDownFrame = valueToInt(token_value);
-                break;
-            case "rollSpeed":
-                rollSpeed = valueToFloat(token_value);
-                break;
-            case "rollStartFrame":
-                rollStartFrame = valueToInt(token_value);
-                break;
-            case "rollInvincibilityFrame":
-                rollInvincibilityFrame = valueToInt(token_value);
-                break;
-            case "rollWakeUpFrame":
-                rollWakeUpFrame = valueToInt(token_value);
-                break;
-            case "jumpOnAirCount":
-                jumpOnAirCount = valueToInt(token_value);
-                break;
-            case "jumpOnAirSpeed":
-                jumpOnAirSpeed = valueToFloat(token_value);
-                break;
-            case "jumpOnAirIdleFrame":
-                jumpOnAirIdleFrame = valueToInt(token_value);
-                break;
-            case "jumpOnAirFrame":
-                jumpOnAirFrame = valueToInt(token_value);
-                break;
-            case "dashCount":
-                dashCount = valueToInt(token_value);
-                break;
-            case "dashSpeed":
-                dashSpeed = valueToFloat(token_value);
-                break;
-            case "dashIdleFrame":
-                dashIdleFrame = valueToInt(token_value);
-                break;
-            case "dashInvincibilityFrame":
-                dashInvincibilityFrame = valueToInt(token_value);
-                break;
-            case "takeDownSpeed":
-                takeDownSpeed = valueToFloat(token_value);
-                break;
-            case "takeDownAirIdleFrame":
-                takeDownAirIdleFrame = valueToInt(token_value);
-                break;
-            case "takeDownLandingIdleFrame":
-                takeDownLandingIdleFrame = valueToInt(token_value);
-                break;
-            case "jumpOnWallSpeedX":
-                jumpOnWallSpeedX = valueToFloat(token_value);
-                break;
-            case "jumpOnWallSpeedY":
-                jumpOnWallSpeedY = valueToFloat(token_value);
-                break;
-            case "jumpOnWallFrame":
-                jumpOnWallFrame = valueToInt(token_value);
-                break;
-            case "jumpOnWallForceFrame":
-                jumpOnWallForceFrame = valueToInt(token_value);
-                break;
-        }
-    }
-
-    private float valueToFloat(string str)
-    {
-        return float.Parse(str);
-    }
-
-    private bool valueToBool(string str)
-    {
-        return bool.Parse(str);
-    }
-
-    private int valueToInt(string str)
-    {
-        return int.Parse(str);
-    }
-
-    public void OpneExplorer()
+    public void OpenExplorer()
     {
         string path = Application.persistentDataPath.Replace("/", "\\");
-
-        Process process = new System.Diagnostics.Process();
-        process.StartInfo = new ProcessStartInfo("explorer.exe", path);
-        process.StartInfo.UseShellExecute = true;
-        process.StartInfo.Verb = "runas";
-        process.Start();
+        UnityWinAPI.OpenExplorer(path);
     }
     #endregion
 }

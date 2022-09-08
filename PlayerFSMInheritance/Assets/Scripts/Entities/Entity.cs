@@ -135,6 +135,11 @@ public class Entity : MonoBehaviour
         Physics2D.IgnoreCollision(bodyBox, collider, true);
     }
 
+    protected bool CanCollision(Collider2D collider)
+    {
+        return !Physics2D.GetIgnoreCollision(feetBox, collider);
+    }
+
     // Unity Event Functions
     protected virtual void Start()
     {

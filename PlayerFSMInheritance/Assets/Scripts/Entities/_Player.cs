@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using UnityEngine;
 
 // 최적화 코드
@@ -19,14 +20,15 @@ public class _Player : Entity
     private const int stGliding = 7;
     private const int stIdleWall = 8;
     private const int stWallSliding = 9;
-    private const int stLedgeClimb = 10;
-    private const int stJumpGround = 11;
-    private const int stJumpDown = 12;
-    private const int stRoll = 13;
-    private const int stJumpAir = 14;
-    private const int stDash = 15;
-    private const int stTakeDown = 16;
-    private const int stJumpWall = 17;
+    private const int stLedgeClimbHead = 10;
+    private const int stLedgeClimbBody = 11;
+    private const int stJumpGround = 12;
+    private const int stJumpDown = 13;
+    private const int stRoll = 14;
+    private const int stJumpAir = 15;
+    private const int stDash = 16;
+    private const int stTakeDown = 17;
+    private const int stJumpWall = 18;
     #endregion
 
     // NOTE: 플레이어 초기 위치, 테스트를 위한 벡터 변수, 릴리즈 시 제거해야 함.
@@ -75,6 +77,8 @@ public class _Player : Entity
     protected bool canCheckHeadOverSemiGround = true;
     protected RaycastHit2D headOverSemiGroundBefore;
     protected RaycastHit2D headOverSemiGroundCurrent;
+    private RaycastHit2D[] headOverSemiGroundBefores;
+    private RaycastHit2D[] headOverSemiGroundCurrents;
 
     // Check Ledge
     protected bool canCheckLedge = true;
@@ -83,7 +87,6 @@ public class _Player : Entity
     public float ledgeCheckingHeight = 0.2f;
     protected Vector2 ledgeCornerTopPos;
     protected Vector2 ledgeCornerSidePos;
-    // protected Vector2 ledgeTeleportPos; // 쓸까 말까?
     public bool isHitLedgeHead;
     public bool isHitLedgeBody;
 
@@ -124,6 +127,7 @@ public class _Player : Entity
     // stSit options
     // TODO: 외부 클래스에서 접근해야 할 필요가 있음.
     private int proceedSitFrame;
+    private RaycastHit2D currentSitGround;
 
     // stHeadUp options
     // TODO: 외부 클래스에서 접근해야 할 필요가 있음.
@@ -161,7 +165,9 @@ public class _Player : Entity
     private int proceedWallSlidingFrame;
 
     // stLedgeClimb options
-    public bool isEndOfLedgeAnimation;
+    public Vector2 ledgeHoldPos;
+    public Vector2 ledgeEndPos;
+    public bool isLedgeAnimationEnded;
 
     // stJumpGround options
     public int jumpGroundCount = 1;
@@ -296,29 +302,29 @@ public class _Player : Entity
 
         return currentVx;
     }
-// Check Ground/Ceil/(Wall)/(Head-Over Semi Ground)/(Ledge)/(Ledge Hanging)
-    protected void CheckGrounds()
+// (Check Ground)/(Ceil)/(Wall)/(Head-Over Semi Ground)/(Ledge)/(Ledge Hanging)
+    protected void CheckGround()
     {
-        if(canCheckBasicGround && canCheckSemiGround)
+        CheckGroundAll(out detectedGround, out isDetectedGround, fPos, 0.5f);
+
+        if(!isDetectedGround)
         {
-            CheckGroundAll(out detectedGround, out isDetectedGround, fPos, 0.5f);
-            isHitGround = isDetectedGround && detectedGround.distance <= 0.04f;
-        }
-        else if(canCheckBasicGround && !canCheckSemiGround)
-        {
-            CheckGroundBasic(out detectedGround, out isDetectedGround, fPos, 0.5f);
-            isHitGround = isDetectedGround && detectedGround.distance <= 0.04f;
-        }
-        else if(!canCheckBasicGround && canCheckSemiGround)
-        {
-            CheckGroundThroughable(out detectedGround, out isDetectedGround, fPos, 0.5f);
-            isHitGround = isDetectedGround && detectedGround.distance <= 0.04f;
-        }
-        else
-        {
-            detectedGround = default(RaycastHit2D);
-            isDetectedGround = false;
             isHitGround = false;
+        }
+        else if(detectedGround.collider.gameObject.layer == LayerInfo.ground)
+            isHitGround = detectedGround.distance <= 0.04f;
+        else if(detectedGround.collider.gameObject.layer == LayerInfo.throughableGround)
+        {
+            if(base.CanCollision(detectedGround.collider))
+            {
+                isHitGround = detectedGround.distance <= 0.04f;
+            }
+            else
+            {
+                detectedGround = default(RaycastHit2D);
+                isDetectedGround = false;
+                isHitGround = false;
+            }
         }
     }
 
@@ -359,58 +365,31 @@ public class _Player : Entity
 
     protected void CheckHeadOverSemiGround()
     {
-        headOverSemiGroundBefore = headOverSemiGroundCurrent;
+        float detectLength = base.height + 0.5f;
+        int layer = LayerInfo.throughableGroundMask;
 
-        if(!canCheckHeadOverSemiGround)
+        headOverSemiGroundBefores = headOverSemiGroundCurrents;
+        headOverSemiGroundCurrents = Physics2D.RaycastAll(fPos, Vector2.up, detectLength, layer);
+
+        if(headOverSemiGroundBefores == null || headOverSemiGroundCurrents == null)
+            return;
+
+        for(int i = 0; i < headOverSemiGroundCurrents.Length; i++)
         {
-            headOverSemiGroundCurrent = default(RaycastHit2D);
+            bool exist = Array.Exists<RaycastHit2D>(headOverSemiGroundBefores, (element) => element == headOverSemiGroundCurrents[i]);
+            bool canCollision = base.CanCollision(headOverSemiGroundCurrents[i].collider);
 
-            canCheckBasicGround = true;
-            canCheckSemiGround = true;
-            canCheckHangingBasic = true;
-            canCheckHangingSemi = true;
+            if(!exist && canCollision)
+                base.IgnoreCollision(headOverSemiGroundCurrents[i].collider);
         }
-        else
+
+        for(int i = 0; i < headOverSemiGroundBefores.Length; i++)
         {
-            float detectLength = base.height + 0.5f;
-            int layer = LayerInfo.throughableGroundMask;
+            bool exist = Array.Exists<RaycastHit2D>(headOverSemiGroundCurrents, (element) => element == headOverSemiGroundBefores[i]);
+            bool canCollision = base.CanCollision(headOverSemiGroundBefores[i].collider);
 
-            headOverSemiGroundCurrent = Physics2D.Raycast(fPos, Vector2.up, detectLength, layer);
-
-            if(headOverSemiGroundBefore)
-            {
-                if(!headOverSemiGroundCurrent)
-                {
-                    AcceptCollision(headOverSemiGroundBefore.collider);
-                }
-                else if(headOverSemiGroundBefore.collider != headOverSemiGroundCurrent.collider)
-                {
-                    AcceptCollision(headOverSemiGroundBefore.collider);
-                    IgnoreCollision(headOverSemiGroundCurrent.collider);
-                }
-            }
-            else if(headOverSemiGroundCurrent)
-            {
-                IgnoreCollision(headOverSemiGroundCurrent.collider);
-            }
-
-            if(headOverSemiGroundCurrent)
-            {
-                canCheckBasicGround = false;
-                canCheckSemiGround = false;
-                canCheckCeil = false;
-                canCheckHangingBasic = true;
-                canCheckHangingSemi = false;
-            }
-            else
-            {
-                canCheckBasicGround = true;
-                canCheckSemiGround = true;
-                canCheckCeil = true;
-                canCheckHangingBasic = true;
-                // canCheckHangingSemi = !currentJumpDownGround;
-                canCheckHangingSemi = true;
-            }
+            if(!exist && !canCollision)
+                base.AcceptCollision(headOverSemiGroundBefores[i].collider);
         }
     }
 
@@ -451,45 +430,74 @@ public class _Player : Entity
         RaycastHit2D sideOverHit = Physics2D.Raycast(sideOverPos, detectDir, ledgeCheckingWidth, layer);
         RaycastHit2D bodyHit = Physics2D.Raycast(bodyPos, detectDir, ledgeCheckingWidth, layer);
 
-        if(!sideOverHit)
+        isHitLedgeHead = !sideOverHit &&sideHit;
+        isHitLedgeBody = !sideOverHit &&bodyHit;
+
+        bool a = sideOverHit;
+        bool b = isHitLedgeHead;
+        bool c = isHitLedgeBody;
+
+        Debug.Log(string.Format("{0}, {1}, {2}", a, b, c));
+
+        if(!sideOverHit && (isHitLedgeHead || isHitLedgeBody))
         {
-            if(sideHit)
-            {
-                isHitLedgeHead = true;
-                isHitLedgeBody = false;
-            }
-            else if(bodyHit)
-            {
-                isHitLedgeHead = false;
-                isHitLedgeBody = true;
-            }
-            else
-            {
-                isHitLedgeHead = false;
-                isHitLedgeBody = false;
-            }
+            float adder = 0.1f;
+            float distance = (sideHit.distance + adder) * lookDir;
+            float height = base.height;
+
+            detectedLedge = Physics2D.Raycast(sideOverPos + Vector2.right * distance, Vector2.down, height, layer);
+            bool d = detectedLedge;
+            Debug.Log(string.Format("{0}", d));
+            ledgeCornerTopPos.Set(detectedLedge.point.x, detectedLedge.point.y);
+            ledgeCornerSidePos.Set(detectedLedge.point.x - adder * lookDir, detectedLedge.point.y - adder);
         }
         else
         {
-            isHitLedgeHead = false;
-            isHitLedgeBody = false;
+            detectedLedge = default(RaycastHit2D);
+            ledgeCornerTopPos.Set(0.0f, 0.0f);
+            ledgeCornerSidePos.Set(0.0f, 0.0f);
         }
     }
 
     protected void CheckLedgeHanging()
     {
         float detectLength = 0.04f;
-        int layer = 0;
-
-        if(canCheckHangingBasic)
-            layer |= LayerInfo.groundMask;
-        if(canCheckHangingSemi)
-            layer |= LayerInfo.throughableGroundMask;
+        int layer = LayerInfo.groundMask | LayerInfo.throughableGroundMask;
 
         leftHangingGround = Physics2D.Raycast(flPos, Vector2.down, detectLength, layer);
         rightHangingGround = Physics2D.Raycast(frPos, Vector2.down, detectLength, layer);
 
-        isHangingGround = leftHangingGround || rightHangingGround;
+        bool lExist = leftHangingGround;
+        bool rExist = rightHangingGround;
+        Collider2D lCol = null;
+        Collider2D rCol = null;
+        int lLayer = 0;
+        int rLayer = 0;
+        bool lRes = false;
+        bool rRes = false;
+
+        if(lExist)
+        {
+            lCol = leftHangingGround.collider;
+            lLayer = lCol.gameObject.layer;
+
+            if(lLayer == LayerInfo.ground)
+                lRes = true;
+            else if(lLayer == LayerInfo.throughableGround && base.CanCollision(lCol))
+                lRes = true;
+        }
+        if(rExist)
+        {
+            rCol = rightHangingGround.collider;
+            rLayer = rCol.gameObject.layer;
+
+            if(rLayer == LayerInfo.ground)
+                rRes = true;
+            else if(rLayer == LayerInfo.throughableGround && base.CanCollision(rCol))
+                rRes = true;
+        }
+
+        isHangingGround = lRes | rRes;
     }
 
     #region Unity Event Functions
@@ -507,21 +515,22 @@ public class _Player : Entity
         machine.SetCallbacks(stIdleGround, Input_IdleGround, Logic_IdleGround, Enter_IdleGround, End_IdleGround);
         machine.SetCallbacks(stIdleGroundLong, Input_IdleGroundLong, Logic_IdleGroundLong, Enter_IdleGroundLong, null);
         machine.SetCallbacks(stSit, Input_Sit, Logic_Sit, Enter_Sit, End_Sit);
-        //machine.SetCallbacks(stHeadUp, Input_HeadUp, Logic_HeadUp, Enter_HeadUp, End_HeadUp);
-        //machine.SetCallbacks(stWalk, Input_Walk, Logic_Walk, Enter_Walk, null);
-        //machine.SetCallbacks(stRun, Input_Run, Logic_Run, Enter_Run, null);
+        machine.SetCallbacks(stHeadUp, Input_HeadUp, Logic_HeadUp, Enter_HeadUp, End_HeadUp);
+        machine.SetCallbacks(stWalk, Input_Walk, Logic_Walk, Enter_Walk, null);
+        machine.SetCallbacks(stRun, Input_Run, Logic_Run, Enter_Run, null);
         machine.SetCallbacks(stFreeFall, Input_FreeFall, Logic_FreeFall, Enter_FreeFall, null);
-        //machine.SetCallbacks(stGliding, Input_Gliding, Logic_Gliding, Enter_Gliding, null);
-        //machine.SetCallbacks(stIdleWall, Input_IdleWall, Logic_IdleWall, Enter_IdleWall, null);
-        //machine.SetCallbacks(stWallSliding, Input_WallSliding, Logic_WallSliding, Enter_WallSliding, null);
-        //machine.SetCallbacks(stLedgeClimb, Input_LedgeClimb, Logic_LedgeClimb, Enter_LedgeClimb, End_LedgeClimb);
-        //machine.SetCallbacks(stJumpGround, Input_JumpGround, Logic_JumpGround, Enter_JumpGround, null);
+        machine.SetCallbacks(stGliding, Input_Gliding, Logic_Gliding, Enter_Gliding, null);
+        machine.SetCallbacks(stIdleWall, Input_IdleWall, Logic_IdleWall, Enter_IdleWall, null);
+        machine.SetCallbacks(stWallSliding, Input_WallSliding, Logic_WallSliding, Enter_WallSliding, null);
+        machine.SetCallbacks(stLedgeClimbHead, Input_LedgeClimbHead, Logic_LedgeClimbHead, Enter_LedgeClimbHead, End_LedgeClimbHead);
+        machine.SetCallbacks(stLedgeClimbBody, Input_LedgeClimbBody, Logic_LedgeClimbBody, Enter_LedgeClimbBody, End_LedgeClimbBody);
+        machine.SetCallbacks(stJumpGround, Input_JumpGround, Logic_JumpGround, Enter_JumpGround, null);
         machine.SetCallbacks(stJumpDown, Input_JumpDown, Logic_JumpDown, Enter_JumpDown, End_JumpDown);
-        //machine.SetCallbacks(stRoll, Input_Roll, Logic_Roll, Enter_Roll, null);
-        //machine.SetCallbacks(stJumpAir, Input_JumpOnAir, Logic_JumpOnAir, Enter_JumpOnAir, null);
-        //machine.SetCallbacks(stDash, Input_Dash, Logic_Dash, Enter_Dash, null);
-        //machine.SetCallbacks(stTakeDown, Input_TakeDown, Logic_TakeDown, Enter_TakeDown, null);
-        //machine.SetCallbacks(stJumpWall, Input_JumpWall, Logic_JumpWall, Enter_JumpWall, null);
+        machine.SetCallbacks(stRoll, Input_Roll, Logic_Roll, Enter_Roll, null);
+        machine.SetCallbacks(stJumpAir, Input_JumpAir, Logic_JumpAir, Enter_JumpAir, null);
+        machine.SetCallbacks(stDash, Input_Dash, Logic_Dash, Enter_Dash, null);
+        machine.SetCallbacks(stTakeDown, Input_TakeDown, Logic_TakeDown, Enter_TakeDown, null);
+        machine.SetCallbacks(stJumpWall, Input_JumpWall, Logic_JumpWall, Enter_JumpWall, null);
 
         InitGraphs();
     }
@@ -558,16 +567,15 @@ public class _Player : Entity
 
         m_UpdatePositions();
 
-        CheckGrounds();
+        CheckGround();
         CheckCeil();
         CheckWall();
         CheckHeadOverSemiGround();
-        curCol = headOverSemiGroundCurrent.collider;
-        befCol = headOverSemiGroundBefore.collider;
         CheckLedge();
         CheckLedgeHanging();
 
         UpdateLookDir();
+        UpdateMoveDirection();
 
         machine.UpdateLogic();
     }
@@ -583,6 +591,18 @@ public class _Player : Entity
         leftJumpGroundCount = jumpGroundCount;
         leftJumpAirCount = jumpAirCount;
         leftDashCount = dashCount;
+
+        // 아래 점프 가능한 발판과의 통과 여부 취소
+        if(currentSitGround)
+        {
+            bool exists = Array.Exists<RaycastHit2D>(headOverSemiGroundCurrents, (element) => element.collider == currentSitGround.collider);
+            bool canCollision = base.CanCollision(currentSitGround.collider);
+
+            if(!exists && !canCollision)
+                base.AcceptCollision(currentSitGround.collider);
+
+            currentSitGround = default(RaycastHit2D);
+        }
 
         // 선입력 확인
         uint mask_jumpGround = 0b01;
@@ -668,11 +688,43 @@ public class _Player : Entity
     }
     #endregion
 
+    #region Implement State; stHeadUp
+    private void Enter_HeadUp()
+    {
+        DisableGravity();
+        proceedHeadUpFrame = 0;
+    }
+
+    private void Input_HeadUp()
+    {
+        if(!isHitGround)
+            machine.ChangeState(stFreeFall);
+        else if(inputData.jumpDown)
+            machine.ChangeState(stJumpGround);
+        else if(inputData.dashDown)
+            machine.ChangeState(stRoll);
+        else if(inputData.yPositive == 0)
+            machine.ChangeState(stIdleGround);
+    }
+
+    private void Logic_HeadUp()
+    {
+        proceedHeadUpFrame++;
+        SetVelocityXY(0.0f, 0.0f);
+    }
+
+    private void End_HeadUp()
+    {
+        proceedHeadUpFrame = 0;
+    }
+    #endregion
+
     #region Implement State; stSit
     private void Enter_Sit()
     {
         DisableGravity();
         proceedSitFrame = 0;
+        currentSitGround = detectedGround;
     }
 
     private void Input_Sit()
@@ -701,6 +753,80 @@ public class _Player : Entity
     private void End_Sit()
     {
         proceedSitFrame = 0;
+    }
+    #endregion
+
+    #region Implement State; stWalk
+    private void Enter_Walk()
+    {
+        EnableGravity();
+    }
+
+    private void Input_Walk()
+    {
+        if(!isHitGround)
+            machine.ChangeState(stFreeFall);
+        else if(inputData.yNegative != 0)
+            machine.ChangeState(stSit);
+        else if(inputData.yPositive != 0)
+            machine.ChangeState(stHeadUp);
+        else if(isRun)
+            machine.ChangeState(stRun);
+        else if(inputData.jumpDown)
+            machine.ChangeState(stJumpGround);
+        else if(inputData.dashDown)
+            machine.ChangeState(stRoll);
+        else if(inputData.xInput == 0)
+            machine.ChangeState(stIdleGround);
+    }
+
+    private void Logic_Walk()
+    {
+        float speed = CheckVelocityX(walkSpeed);
+
+        if(speed == 0)
+            DisableGravity();
+        else
+            EnableGravity();
+
+        Logic_MoveOnGround(moveDir, speed, lookDir);
+    }
+    #endregion
+
+    #region Implement State; stRun
+    private void Enter_Run()
+    {
+        EnableGravity();
+    }
+
+    private void Input_Run()
+    {
+        if(!isHitGround)
+            machine.ChangeState(stFreeFall);
+        else if(inputData.yNegative != 0)
+            machine.ChangeState(stSit);
+        else if(inputData.yPositive != 0)
+            machine.ChangeState(stHeadUp);
+        else if(!isRun)
+            machine.ChangeState(stWalk);
+        else if(inputData.jumpDown)
+            machine.ChangeState(stJumpGround);
+        else if(inputData.dashDown)
+            machine.ChangeState(stRoll);
+        else if(inputData.xInput == 0)
+            machine.ChangeState(stIdleGround);
+    }
+
+    private void Logic_Run()
+    {
+        float speed = CheckVelocityX(runSpeed);
+
+        if(speed == 0)
+            DisableGravity();
+        else
+            EnableGravity();
+
+        Logic_MoveOnGround(moveDir, speed, lookDir);
     }
     #endregion
 
@@ -763,8 +889,15 @@ public class _Player : Entity
             machine.ChangeState(stDash);
         else if(inputData.yPositive != 0)
             machine.ChangeState(stGliding);
-
-        // TODO: 렛지 코드 추가 요망
+        else if(inputData.xInput == lookDir)
+        {
+            if(isHitLedgeHead)
+                machine.ChangeState(stLedgeClimbHead);
+            else if(isHitLedgeBody)
+                machine.ChangeState(stLedgeClimbBody);
+            else if(!isDetectedGround && inputData.yNegative == 0 && isHitWallB == lookDir && isHitWallT == lookDir)
+                machine.ChangeState(stIdleWall);
+        }
     }
 
     private void Logic_FreeFall()
@@ -783,23 +916,372 @@ public class _Player : Entity
     }
     #endregion
 
+    #region Implement State; stGliding
+    private void Enter_Gliding()
+    {
+        EnableGravity();
+
+        if(Mathf.Abs(currentVelocity.x) == 0.0f)
+        {
+            leftGlidingDeaccelFrameX = 0;
+            proceedGlidingAccelFrameX = 0;
+        }
+        else if(Mathf.Abs(currentVelocity.x) > GetMoveSpeed())
+        {
+            if(inputData.xInput == 0)
+            {
+                leftGlidingDeaccelFrameX = glidingDeaccelFrameX;
+                proceedGlidingAccelFrameX = 0;
+            }
+            else
+            {
+                leftGlidingDeaccelFrameX = 0;
+                proceedGlidingAccelFrameX = glidingAccelFrameX;
+            }
+        }
+        else
+        {
+            if(inputData.xInput == 0)
+            {
+                for(int i = 0; i < glidingDeaccelFrameX; i++)
+                {
+                    if(Mathf.Abs(currentVelocity.x) >= glidingDeaccelGraphX[i])
+                    {
+                        leftGlidingDeaccelFrameX = i;
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                for(int i = 0; i < glidingAccelFrameX; i++)
+                {
+                    if(Mathf.Abs(currentVelocity.x) >= glidingAccelGraphX[i])
+                    {
+                        proceedGlidingAccelFrameX = i;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    private void Input_Gliding()
+    {
+        if(isHitGround)
+            machine.ChangeState(stIdleGround);
+        else if(inputData.jumpDown && leftJumpAirCount > 0)
+            machine.ChangeState(stJumpAir);
+        else if(inputData.dashDown && leftDashCount > 0)
+            machine.ChangeState(stDash);
+        else if(inputData.yPositive == 0)
+            machine.ChangeState(stFreeFall);
+        else if(inputData.xInput == lookDir)
+        {
+            if(isHitLedgeHead)
+                machine.ChangeState(stLedgeClimbHead);
+            else if(isHitLedgeBody)
+                machine.ChangeState(stLedgeClimbBody);
+            else if(!isDetectedGround && inputData.yNegative == 0 && isHitWallB == lookDir && isHitWallT == lookDir)
+                machine.ChangeState(stIdleWall);
+        }
+    }
+
+    private void Logic_Gliding()
+    {
+        vy = -glidingSpeed;
+
+        if(currentVelocity.x * inputData.xInput < 0.0f)
+        {
+            proceedGlidingAccelFrameX = 0;
+            leftGlidingDeaccelFrameX = 0;
+            vx = 0.0f;
+        }
+        else if(inputData.xInput == 0)
+        {
+            if(leftGlidingDeaccelFrameX > 0)
+                leftGlidingDeaccelFrameX--;
+
+            proceedGlidingAccelFrameX = 0;
+            vx = CheckVelocityX(GetMoveSpeed() * glidingDeaccelGraphX[leftGlidingDeaccelFrameX] * lookDir);
+        }
+        else if(inputData.xInput != 0)
+        {
+            if(proceedGlidingAccelFrameX < glidingAccelFrameX)
+                proceedGlidingAccelFrameX++;
+
+            leftGlidingDeaccelFrameX = glidingDeaccelFrameX;
+            vx = CheckVelocityX(GetMoveSpeed() * glidingAccelGraphX[proceedGlidingAccelFrameX - 1] * lookDir);
+        }
+
+        SetVelocityXY(vx, vy);
+    }
+    #endregion
+
+    #region Implement State; stIdleWall
+    private void Enter_IdleWall()
+    {
+        DisableGravity();
+        leftJumpAirCount = jumpAirCount;
+        leftDashCount = dashCount;
+
+        // 아래 점프 가능한 발판과의 통과 여부 취소
+        if(currentSitGround)
+        {
+            bool exists = Array.Exists<RaycastHit2D>(headOverSemiGroundCurrents, (element) => element.collider == currentSitGround.collider);
+            bool canCollision = base.CanCollision(currentSitGround.collider);
+
+            if(!exists && !canCollision)
+                base.AcceptCollision(currentSitGround.collider);
+
+            currentSitGround = default(RaycastHit2D);
+        }
+
+        // 선입력
+        uint mask_jumpWall = 0b01;
+        preInputPressing = 0b00;
+        preInputDown = 0b00;
+
+        for(int i = 0; i < preInputFrameIdleWall; i++)
+        {
+            preInputData.Copy(InputBuffer.GetBufferedData(i));
+
+            if((preInputPressing & mask_jumpWall) == 0 && preInputData.jumpPressing)
+                preInputPressing |= mask_jumpWall;
+            if((preInputDown & mask_jumpWall) == 0 && preInputData.jumpDown)
+                preInputDown |= mask_jumpWall;
+        }
+
+        if((preInputDown & mask_jumpWall) != 0 && (preInputPressing & mask_jumpWall) != 0)
+            machine.ChangeState(stJumpWall);
+    }
+
+    private void Input_IdleWall()
+    {
+        if(isDetectedGround || isHitWallB == 0 || isHitWallT == 0 || inputData.yNegDown)
+            machine.ChangeState(stFreeFall);
+        else if(inputData.xInput == 0)
+            machine.ChangeState(stWallSliding);
+        else if(inputData.jumpDown)
+            machine.ChangeState(stJumpWall);
+    }
+
+    private void Logic_IdleWall()
+    {
+        SetVelocityXY(0.0f, 0.0f);
+    }
+    #endregion
+
+    #region Implement State; stWallSliding
+    private void Enter_WallSliding()
+    {
+        EnableGravity();
+        proceedWallSlidingFrame = 0;
+    }
+
+    private void Input_WallSliding()
+    {
+        if(isHitGround)
+            machine.ChangeState(stIdleGround);
+        else if(isDetectedGround || isHitWallB == 0 || isHitWallT == 0 || inputData.yNegDown)
+            machine.ChangeState(stFreeFall);
+        else if(inputData.xInput == lookDir && inputData.yNegative == 0 && !isDetectedGround && isHitWallB == lookDir && isHitWallT == lookDir)
+            machine.ChangeState(stIdleWall);
+        else if(inputData.jumpDown)
+            machine.ChangeState(stJumpWall);
+    }
+
+    private void Logic_WallSliding()
+    {
+        if(proceedWallSlidingFrame < wallSlidingFrame)
+            proceedWallSlidingFrame++;
+
+        vx = 0.0f;
+        vy = -maxWallSlidingSpeed * wallSlidingGraph[proceedWallSlidingFrame - 1];
+        SetVelocityXY(vx, vy);
+    }
+    #endregion
+
+    #region Implement State; stLedgeClimbHead
+    private void Enter_LedgeClimbHead()
+    {
+        DisableGravity();
+
+        canUpdateLookDir = false;
+        canCheckLedge = false;
+        isLedgeAnimationEnded = false;
+
+        Vector2 sidePos = Vector2.zero;
+        Vector2 handDir = Vector2.zero;
+        Vector2 feetDir = Vector2.zero;
+
+        if(lookDir == 1)
+            sidePos = hrPos;
+        else if(lookDir == -1)
+            sidePos = hlPos;
+
+        handDir.Set(transform.position.x - sidePos.x, transform.position.y - sidePos.y);
+        feetDir.Set(transform.position.x - fPos.x, transform.position.y - fPos.y);
+
+        ledgeHoldPos.Set(ledgeCornerSidePos.x + handDir.x, ledgeCornerSidePos.y + handDir.y);
+        ledgeEndPos.Set(ledgeCornerTopPos.x + feetDir.x, ledgeCornerTopPos.y + feetDir.y);
+
+        Action holdLedge = () =>
+        {
+            Thread.Sleep(2000);
+            isLedgeAnimationEnded = true;
+        };
+
+        Thread holdThread = new Thread(new ThreadStart(holdLedge));
+        holdThread.Start();
+
+        transform.position = ledgeHoldPos;
+    }
+
+    private void Input_LedgeClimbHead()
+    {
+        if(isLedgeAnimationEnded)
+            machine.ChangeState(stIdleGround);
+    }
+
+    private void Logic_LedgeClimbHead()
+    {
+        SetVelocityXY(0.0f, 0.0f);
+    }
+
+    private void End_LedgeClimbHead()
+    {
+        transform.position = ledgeEndPos;
+        canUpdateLookDir = true;
+        canCheckLedge = true;
+    }
+    #endregion
+
+    #region Implement State; stLedgeClimbBody
+    private void Enter_LedgeClimbBody()
+    {
+        DisableGravity();
+
+        canUpdateLookDir = false;
+        canCheckLedge = false;
+        isLedgeAnimationEnded = false;
+
+        Vector2 sidePos = Vector2.zero;
+        Vector2 handDir = Vector2.zero;
+        Vector2 feetDir = Vector2.zero;
+
+        if(lookDir == 1)
+            sidePos = crPos;
+        else if(lookDir == -1)
+            sidePos = clPos;
+
+        handDir.Set(transform.position.x - sidePos.x, transform.position.y - sidePos.y);
+        feetDir.Set(transform.position.x - fPos.x, transform.position.y - fPos.y);
+
+        ledgeHoldPos.Set(ledgeCornerSidePos.x + handDir.x, ledgeCornerSidePos.y + handDir.y);
+        ledgeEndPos.Set(ledgeCornerTopPos.x + feetDir.x, ledgeCornerTopPos.y + feetDir.y);
+
+        Action holdLedge = () =>
+        {
+            Thread.Sleep(2000);
+            isLedgeAnimationEnded = true;
+        };
+
+        Thread holdThread = new Thread(new ThreadStart(holdLedge));
+        holdThread.Start();
+
+        transform.position = ledgeHoldPos;
+    }
+
+    private void Input_LedgeClimbBody()
+    {
+        if(isLedgeAnimationEnded)
+            machine.ChangeState(stIdleGround);
+    }
+
+    private void Logic_LedgeClimbBody()
+    {
+        SetVelocityXY(0.0f, 0.0f);
+    }
+
+    private void End_LedgeClimbBody()
+    {
+        transform.position = ledgeEndPos;
+        canUpdateLookDir = true;
+        canCheckLedge = true;
+    }
+    #endregion
+
+    #region Implement State; stJumpGround
+    private void Enter_JumpGround()
+    {
+        EnableGravity();
+
+        leftJumpGroundCount--;
+        leftJumpGroundFrame = jumpGroundFrame;
+        isJumpGroundCanceled = false;
+    }
+
+    private void Input_JumpGround()
+    {
+        if(inputData.jumpUp && !isJumpGroundCanceled)
+        {
+            leftJumpGroundFrame /= 2;
+            isJumpGroundCanceled = true;
+        }
+
+        if(isHitCeil || leftJumpGroundFrame == 0)
+        {
+            if(inputData.yPositive == 0)
+                machine.ChangeState(stFreeFall);
+            else
+                machine.ChangeState(stGliding);
+        }
+        else if(inputData.jumpDown)
+        {
+            if(inputData.yNegative != 0)
+                machine.ChangeState(stTakeDown);
+            else if(leftJumpAirCount > 0)
+                machine.ChangeState(stJumpAir);
+        }
+        else if(inputData.dashDown && leftDashCount > 0)
+            machine.ChangeState(stDash);
+        else if(inputData.xInput == lookDir)
+        {
+            if(isHitLedgeHead)
+                machine.ChangeState(stLedgeClimbHead);
+            else if(isHitLedgeBody)
+                machine.ChangeState(stLedgeClimbBody);
+            else if(!isDetectedGround && inputData.yNegative == 0 && isHitWallB == lookDir && isHitWallT == lookDir)
+                machine.ChangeState(stIdleWall);
+        }
+    }
+
+    private void Logic_JumpGround()
+    {
+        if(leftJumpGroundFrame > 0)
+            leftJumpGroundFrame--;
+
+        vx = CheckVelocityX(inputData.xInput * GetMoveSpeed());
+        vy = jumpGroundSpeed * jumpGroundGraph[leftJumpGroundFrame];
+
+        SetVelocityXY(vx, vy);
+    }
+    #endregion
+
     #region Implement State; stJumpDown
     private void Enter_JumpDown()
     {
         EnableGravity();
 
-        currentJumpDownGround = detectedGround;
         leftJumpDownFrame = jumpDownFrame;
 
-        IgnoreCollision(currentJumpDownGround.collider);
-        curJumpDownCol = currentJumpDownGround.collider;
+        IgnoreCollision(currentSitGround.collider);
     }
-public Collider2D curCol;
-public Collider2D befCol;
-public Collider2D curJumpDownCol;
+
     private void Input_JumpDown()
     {
-        if(headOverSemiGroundCurrent && headOverSemiGroundCurrent.collider == currentJumpDownGround.collider && headOverSemiGroundCurrent.distance >= 0.1f)
+        if(leftJumpDownFrame == 0 || isHitCeil)
             machine.ChangeState(stFreeFall);
     }
 
@@ -817,6 +1299,309 @@ public Collider2D curJumpDownCol;
     private void End_JumpDown()
     {
         currentJumpDownGround = default(RaycastHit2D);
+    }
+    #endregion
+
+    #region Implement State; stRoll
+    private void Enter_Roll()
+    {
+        EnableGravity();
+        leftRollStartFrame = rollStartFrame;
+        leftRollInvincibilityFrame = 0;
+        leftRollWakeUpFrame = 0;
+        leftRollFrame = rollStartFrame + rollInvincibilityFrame + rollWakeUpFrame;
+        rollLookDir = lookDir;
+    }
+
+    private void Input_Roll()
+    {
+        if(!isDetectedGround)
+            machine.ChangeState(stFreeFall);
+        else if(inputData.jumpDown && leftJumpGroundCount > 0 && leftRollFrame < rollInvincibilityFrame + rollWakeUpFrame)
+            machine.ChangeState(stJumpGround);
+        else if(inputData.xInput != 0 && leftRollFrame < rollWakeUpFrame)
+            machine.ChangeState(isRun ? stRun : stWalk);
+        else if(leftRollFrame == 0)
+        {
+            if(inputData.yNegative != 0)
+                machine.ChangeState(stSit);
+            else
+                machine.ChangeState(stIdleGround);
+        }
+    }
+
+    private void Logic_Roll()
+    {
+        // 프레임 갱신 및 구르기 내부 상태 전환
+        // 구르기 초반->중반(무적)->후반(일어나기)
+        if(leftRollStartFrame > 0)
+        {
+            leftRollStartFrame--;
+
+            if(leftRollStartFrame == 0)
+                leftRollInvincibilityFrame = rollInvincibilityFrame;
+        }
+        else if(leftRollInvincibilityFrame > 0)
+        {
+            leftRollInvincibilityFrame--;
+
+            if(leftRollInvincibilityFrame == 0)
+                leftRollWakeUpFrame = rollWakeUpFrame;
+        }
+        else if(leftRollWakeUpFrame > 0)
+        {
+            leftRollWakeUpFrame--;
+        }
+
+        // 전체 프레임 갱신
+        if(leftRollFrame > 0)
+            leftRollFrame--;
+
+        float speed = CheckVelocityX(rollSpeed);
+
+        if(speed == 0)
+            DisableGravity();
+        else
+            EnableGravity();
+
+        Logic_MoveOnGround(moveDir, speed * rollGraph[leftRollFrame], rollLookDir);
+    }
+    #endregion
+
+    #region Implement State; stJumpAir
+    private void Enter_JumpAir()
+    {
+        DisableGravity();
+        leftJumpAirCount--;
+        leftJumpAirIdleFrame = jumpAirIdleFrame;
+        leftJumpAirFrame = 0;
+        isJumpAirCanceled = false;
+    }
+
+    private void Input_JumpAir()
+    {
+        if(inputData.jumpUp && !isJumpAirCanceled)
+        {
+            leftJumpAirFrame /= 2;
+            isJumpAirCanceled = true;
+        }
+
+        if((leftJumpAirIdleFrame == 0 && leftJumpAirFrame == 0) || isHitCeil)
+        {
+            if(inputData.yPositive == 0)
+                machine.ChangeState(stFreeFall);
+            else
+                machine.ChangeState(stGliding);
+        }
+        else if(inputData.jumpDown)
+        {
+            if(leftJumpAirCount > 0)
+                machine.RestartState();
+            else if(inputData.yNegative != 0)
+                machine.ChangeState(stTakeDown);
+        }
+        else if(inputData.dashDown && leftDashCount > 0)
+            machine.ChangeState(stDash);
+        else if(inputData.xInput == lookDir)
+        {
+            if(isHitLedgeHead)
+                machine.ChangeState(stLedgeClimbHead);
+            else if(isHitLedgeBody)
+                machine.ChangeState(stLedgeClimbBody);
+            else if(!isDetectedGround && inputData.yNegative == 0 && isHitWallB == lookDir && isHitWallT == lookDir)
+                machine.ChangeState(stIdleWall);
+        }
+    }
+
+    private void Logic_JumpAir()
+    {
+        if(leftJumpAirIdleFrame > 0)
+        {
+            leftJumpAirIdleFrame--;
+
+            DisableGravity();
+            SetVelocityXY(0.0f, 0.0f);
+
+            if(leftJumpAirIdleFrame == 0)
+                leftJumpAirFrame = jumpAirFrame;
+        }
+        else if(leftJumpAirFrame > 0)
+        {
+            EnableGravity();
+            leftJumpAirFrame--;
+            vx = CheckVelocityX(inputData.xInput * GetMoveSpeed());
+            vy = jumpAirSpeed * jumpAirGraph[leftJumpAirFrame];
+            SetVelocityXY(vx, vy);
+        }
+    }
+    #endregion
+
+    #region Implement State; stDash
+    private void Enter_Dash()
+    {
+        DisableGravity();
+        leftDashCount--;
+        leftDashIdleFrame = dashIdleFrame;
+        leftDashInvincibilityFrame = 0;
+        dashLookDir = lookDir;
+    }
+
+    private void Input_Dash()
+    {
+        if(leftDashIdleFrame == 0 && leftDashInvincibilityFrame == 0)
+            machine.ChangeState(stFreeFall);
+        else if(inputData.xInput == lookDir)
+        {
+            if(isHitLedgeHead)
+                machine.ChangeState(stLedgeClimbHead);
+            else if(isHitLedgeBody)
+                machine.ChangeState(stLedgeClimbBody);
+            else if(!isDetectedGround && inputData.yNegative == 0 && isHitWallB == lookDir && isHitWallT == lookDir)
+                machine.ChangeState(stIdleWall);
+        }
+    }
+
+    private void Logic_Dash()
+    {
+        if(leftDashIdleFrame > 0)
+        {
+            DisableGravity();
+
+            leftDashIdleFrame--;
+            SetVelocityXY(0.0f, 0.0f);
+
+            if(leftDashIdleFrame == 0)
+                leftDashInvincibilityFrame = dashInvincibilityFrame;
+        }
+        else if(leftDashInvincibilityFrame > 0)
+        {
+            EnableGravity();
+
+            leftDashInvincibilityFrame--;
+            vx = CheckVelocityX(dashSpeed * dashGraph[leftDashInvincibilityFrame] * dashLookDir);
+            vy = 0.0f;
+            SetVelocityXY(vx, vy);
+        }
+    }
+    #endregion
+
+    #region Implement State; stTakeDown
+    private void Enter_TakeDown()
+    {
+        leftTakeDownAirIdleFrame = takeDownAirIdleFrame;
+        leftTakeDownLandingIdleFrame = 0;
+        isLandingAfterTakeDown = false;
+    }
+
+    private void Input_TakeDown()
+    {
+        if(leftTakeDownAirIdleFrame == 0 && leftTakeDownLandingIdleFrame == 0)
+            machine.ChangeState(stIdleGround);
+        else if(isLandingAfterTakeDown && !isHitGround)
+            machine.ChangeState(stFreeFall);
+    }
+
+    private void Logic_TakeDown()
+    {
+        if(leftTakeDownAirIdleFrame > 0)
+        {
+            DisableGravity();
+
+            leftTakeDownAirIdleFrame--;
+            SetVelocityXY(0.0f, 0.0f);
+
+            if(leftTakeDownAirIdleFrame == 0)
+                leftTakeDownLandingIdleFrame = takeDownLandingIdleFrame;
+        }
+        else if(!isHitGround)
+        {
+            EnableGravity();
+            SetVelocityXY(0.0f, -takeDownSpeed);
+        }
+        else if(leftTakeDownLandingIdleFrame > 0)
+        {
+            DisableGravity();
+
+            isLandingAfterTakeDown = true;
+            leftTakeDownLandingIdleFrame--;
+
+            SetVelocityXY(0.0f, 0.0f);
+            // TODO: 부서지는 바닥 탐지를 이 곳에서 수행하고, 바닥을 부순다.
+        }
+    }
+    #endregion
+
+    #region Implement State; stJumpWall
+    private void Enter_JumpWall()
+    {
+        EnableGravity();
+        leftJumpWallForceFrame = jumpWallForceFrame;
+        leftJumpWallFrame = jumpWallFrame;
+        jumpWallLookDir = -lookDir;
+        isJumpWallCanceledX = false;
+        isJumpWallCanceledXY = false;
+    }
+
+    private void Input_JumpWall()
+    {
+        if(leftJumpWallForceFrame == 0)
+        {
+            // 상태 기계의 상태변경을 위한 제어 함수
+            if(inputData.jumpDown)
+            {
+                if(inputData.yNegative != 0 && !isDetectedGround)
+                    machine.ChangeState(stTakeDown);
+                else if(leftJumpAirCount > 0)
+                    machine.ChangeState(stJumpAir);
+            }
+            else if(inputData.dashDown && leftDashCount > 0)
+            {
+                machine.ChangeState(stDash);
+            }
+            else if(isHitCeil || leftJumpWallFrame == 0)
+            {
+                if(inputData.yPositive == 0)
+                    machine.ChangeState(stFreeFall);
+                else
+                    machine.ChangeState(stGliding);
+            }
+            else if(inputData.xInput == lookDir)
+            {
+                if(isHitLedgeHead)
+                    machine.ChangeState(stLedgeClimbHead);
+                else if(isHitLedgeBody)
+                    machine.ChangeState(stLedgeClimbBody);
+                else if(!isDetectedGround && inputData.yNegative == 0 && isHitWallB == lookDir && isHitWallT == lookDir)
+                    machine.ChangeState(stIdleWall);
+            }
+
+            // 내부 상태의 변경을 위한 제어 함수
+            if(inputData.jumpUp && !isJumpWallCanceledXY)
+            {
+                isJumpWallCanceledXY = true;
+                leftJumpWallFrame /= 2;
+            }
+            if(inputData.xInput != 0 && !isJumpWallCanceledX)
+            {
+                isJumpWallCanceledXY = true;
+            }
+        }
+    }
+
+    private void Logic_JumpWall()
+    {
+        if(leftJumpWallForceFrame > 0)
+            leftJumpWallForceFrame--;
+
+        if(leftJumpWallFrame > 0)
+        {
+            leftJumpWallFrame--;
+
+            vx = (isJumpWallCanceledX ? GetMoveSpeed() * inputData.xInput : jumpWallSpeedX * jumpWallGraphX[leftJumpWallFrame] * jumpWallLookDir);
+            vy = jumpWallSpeedY * jumpWallGraphY[leftJumpWallFrame];
+
+            SetVelocityXY(vx, vy);
+        }
     }
     #endregion
 }

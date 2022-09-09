@@ -47,9 +47,9 @@ glidingDeaccelFrameX: 26
 maxWallSlidingSpeed: 1.5
 wallSlidingFrame: 26
 
-jumpOnGroundCount: 1
-jumpOnGroundSpeed: 5.5
-jumpOnGroundFrame: 18
+jumpGroundCount: 1
+jumpGroundSpeed: 5.5
+jumpGroundFrame: 18
 
 jumpDownSpeed: 1.5
 jumpDownFrame: 13
@@ -59,10 +59,10 @@ rollStartFrame: 6
 rollInvincibilityFrame: 18
 rollWakeUpFrame: 6
 
-jumpOnAirCount: 1
-jumpOnAirSpeed: 7.5
-jumpOnAirIdleFrame: 3
-jumpOnAirFrame: 20
+jumpAirCount: 1
+jumpAirSpeed: 7.5
+jumpAirIdleFrame: 3
+jumpAirFrame: 20
 
 dashCount: 1
 dashSpeed: 36
@@ -73,10 +73,10 @@ takeDownSpeed: 48
 takeDownAirIdleFrame: 18
 takeDownLandingIdleFrame: 12
 
-jumpOnWallSpeedX: 7
-jumpOnWallSpeedY: 10
-jumpOnWallFrame: 13
-jumpOnWallForceFrame: 6"
+jumpWallSpeedX: 7
+jumpWallSpeedY: 10
+jumpWallFrame: 13
+jumpWallForceFrame: 6"
                 );
             }
         };
@@ -129,7 +129,7 @@ jumpOnWallForceFrame: 6"
                 player.isRun = bool.Parse(tok_value);
                 break;
             case "longIdleTransitionFrame":
-                player.longIdleTransitionFrame = int.Parse(tok_value);
+                player.idleLongTransitionFrame = int.Parse(tok_value);
                 break;
             case "walkSpeed":
                 player.walkSpeed = float.Parse(tok_value);
@@ -158,14 +158,14 @@ jumpOnWallForceFrame: 6"
             case "wallSlidingFrame":
                 player.wallSlidingFrame = int.Parse(tok_value);
                 break;
-            case "jumpOnGroundCount":
-                player.jumpOnGroundCount = int.Parse(tok_value);
+            case "jumpGroundCount":
+                player.jumpGroundCount = int.Parse(tok_value);
                 break;
-            case "jumpOnGroundSpeed":
-                player.jumpOnGroundSpeed = float.Parse(tok_value);
+            case "jumpGroundSpeed":
+                player.jumpGroundSpeed = float.Parse(tok_value);
                 break;
-            case "jumpOnGroundFrame":
-                player.jumpOnGroundFrame = int.Parse(tok_value);
+            case "jumpGroundFrame":
+                player.jumpGroundFrame = int.Parse(tok_value);
                 break;
             case "jumpDownSpeed":
                 player.jumpDownSpeed = float.Parse(tok_value);
@@ -185,17 +185,17 @@ jumpOnWallForceFrame: 6"
             case "rollWakeUpFrame":
                 player.rollWakeUpFrame = int.Parse(tok_value);
                 break;
-            case "jumpOnAirCount":
-                player.jumpOnAirCount = int.Parse(tok_value);
+            case "jumpAirCount":
+                player.jumpAirCount = int.Parse(tok_value);
                 break;
-            case "jumpOnAirSpeed":
-                player.jumpOnAirSpeed = float.Parse(tok_value);
+            case "jumpAirSpeed":
+                player.jumpAirSpeed = float.Parse(tok_value);
                 break;
-            case "jumpOnAirIdleFrame":
-                player.jumpOnAirIdleFrame = int.Parse(tok_value);
+            case "jumpAirIdleFrame":
+                player.jumpAirIdleFrame = int.Parse(tok_value);
                 break;
-            case "jumpOnAirFrame":
-                player.jumpOnAirFrame = int.Parse(tok_value);
+            case "jumpAirFrame":
+                player.jumpAirFrame = int.Parse(tok_value);
                 break;
             case "dashCount":
                 player.dashCount = int.Parse(tok_value);
@@ -218,17 +218,17 @@ jumpOnWallForceFrame: 6"
             case "takeDownLandingIdleFrame":
                 player.takeDownLandingIdleFrame = int.Parse(tok_value);
                 break;
-            case "jumpOnWallSpeedX":
-                player.jumpOnWallSpeedX = float.Parse(tok_value);
+            case "jumpWallSpeedX":
+                player.jumpWallSpeedX = float.Parse(tok_value);
                 break;
-            case "jumpOnWallSpeedY":
-                player.jumpOnWallSpeedY = float.Parse(tok_value);
+            case "jumpWallSpeedY":
+                player.jumpWallSpeedY = float.Parse(tok_value);
                 break;
-            case "jumpOnWallFrame":
-                player.jumpOnWallFrame = int.Parse(tok_value);
+            case "jumpWallFrame":
+                player.jumpWallFrame = int.Parse(tok_value);
                 break;
-            case "jumpOnWallForceFrame":
-                player.jumpOnWallForceFrame = int.Parse(tok_value);
+            case "jumpWallForceFrame":
+                player.jumpWallForceFrame = int.Parse(tok_value);
                 break;
         }
     }

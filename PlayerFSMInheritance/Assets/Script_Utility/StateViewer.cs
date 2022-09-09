@@ -24,24 +24,25 @@ public class StateViewer : MonoBehaviour
 
         switch(state)
         {
-            case 0: return "IdleOnGround";
-            case 1: return "IdleLongOnGround";
+            case 0: return "IdleGround";
+            case 1: return "IdleGroundLong";
             case 2: return "Sit";
             case 3: return "HeadUp";
             case 4: return "Walk";
             case 5: return "Run";
             case 6: return "FreeFall";
             case 7: return "Gliding";
-            case 8: return "IdleOnWall";
+            case 8: return "IdleWall";
             case 9: return "WallSliding";
-            case 10: return "LedgeClimb";
-            case 11: return "JumpOnGround";
-            case 12: return "JumpDown";
-            case 13: return "Roll";
-            case 14: return "JumpOnAir";
-            case 15: return "Dash";
-            case 16: return "TakeDown";
-            case 17: return "JumpOnWall";
+            case 10: return "LedgeClimbHead";
+            case 11: return "LedgeClimbBody";
+            case 12: return "JumpGround";
+            case 13: return "JumpDown";
+            case 14: return "Roll";
+            case 15: return "JumpAir";
+            case 16: return "Dash";
+            case 17: return "TakeDown";
+            case 18: return "JumpWall";
             default: return "ERROR";
         }
     }

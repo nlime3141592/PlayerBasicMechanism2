@@ -698,63 +698,6 @@ Transform:
   m_Father: {fileID: 451491123}
   m_RootOrder: 2
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 90}
---- !u!1 &217744214
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 217744216}
-  - component: {fileID: 217744215}
-  m_Layer: 6
-  m_Name: headBox
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!61 &217744215
-BoxCollider2D:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 217744214}
-  m_Enabled: 1
-  m_Density: 1
-  m_Material: {fileID: 6200000, guid: fa9f795bb97c1ad43a779a85c3ce2f04, type: 2}
-  m_IsTrigger: 0
-  m_UsedByEffector: 0
-  m_UsedByComposite: 0
-  m_Offset: {x: 0, y: 0}
-  m_SpriteTilingProperty:
-    border: {x: 0, y: 0, z: 0, w: 0}
-    pivot: {x: 0, y: 0}
-    oldSize: {x: 0, y: 0}
-    newSize: {x: 0, y: 0}
-    adaptiveTilingThreshold: 0
-    drawMode: 0
-    adaptiveTiling: 0
-  m_AutoTiling: 0
-  serializedVersion: 2
-  m_Size: {x: 0.21213204, y: 0.21213204}
-  m_EdgeRadius: 0
---- !u!4 &217744216
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 217744214}
-  m_LocalRotation: {x: -0, y: -0, z: 0.38268346, w: 0.9238795}
-  m_LocalPosition: {x: -0.07, y: 0.7700001, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_Children: []
-  m_Father: {fileID: 1556633772}
-  m_RootOrder: 1
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 45}
 --- !u!1 &285520976
 GameObject:
   m_ObjectHideFlags: 0
@@ -797,8 +740,8 @@ BoxCollider2D:
     adaptiveTiling: 0
   m_AutoTiling: 0
   serializedVersion: 2
-  m_Size: {x: 1, y: 1}
-  m_EdgeRadius: 0
+  m_Size: {x: 0.6, y: 0.975}
+  m_EdgeRadius: 0.1
 --- !u!212 &285520978
 SpriteRenderer:
   m_ObjectHideFlags: 0
@@ -1015,63 +958,6 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &679649004
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 679649006}
-  - component: {fileID: 679649005}
-  m_Layer: 6
-  m_Name: feetBox
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!61 &679649005
-BoxCollider2D:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 679649004}
-  m_Enabled: 1
-  m_Density: 1
-  m_Material: {fileID: 6200000, guid: fa9f795bb97c1ad43a779a85c3ce2f04, type: 2}
-  m_IsTrigger: 0
-  m_UsedByEffector: 0
-  m_UsedByComposite: 0
-  m_Offset: {x: 0, y: 0}
-  m_SpriteTilingProperty:
-    border: {x: 0, y: 0, z: 0, w: 0}
-    pivot: {x: 0, y: 0}
-    oldSize: {x: 0, y: 0}
-    newSize: {x: 0, y: 0}
-    adaptiveTilingThreshold: 0
-    drawMode: 0
-    adaptiveTiling: 0
-  m_AutoTiling: 0
-  serializedVersion: 2
-  m_Size: {x: 0.21213204, y: 0.21213204}
-  m_EdgeRadius: 0
---- !u!4 &679649006
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 679649004}
-  m_LocalRotation: {x: -0, y: -0, z: 0.38268346, w: 0.9238795}
-  m_LocalPosition: {x: -0.07, y: -0.97000015, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_Children: []
-  m_Father: {fileID: 1556633772}
-  m_RootOrder: 0
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 45}
 --- !u!1 &685295476
 GameObject:
   m_ObjectHideFlags: 0
@@ -1165,63 +1051,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 685295476}
   m_CullTransparentMesh: 1
---- !u!1 &764070328
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 764070330}
-  - component: {fileID: 764070329}
-  m_Layer: 6
-  m_Name: bodyBox
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!61 &764070329
-BoxCollider2D:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 764070328}
-  m_Enabled: 1
-  m_Density: 1
-  m_Material: {fileID: 6200000, guid: fa9f795bb97c1ad43a779a85c3ce2f04, type: 2}
-  m_IsTrigger: 0
-  m_UsedByEffector: 0
-  m_UsedByComposite: 0
-  m_Offset: {x: 0, y: 0}
-  m_SpriteTilingProperty:
-    border: {x: 0, y: 0, z: 0, w: 0}
-    pivot: {x: 0, y: 0}
-    oldSize: {x: 0, y: 0}
-    newSize: {x: 0, y: 0}
-    adaptiveTilingThreshold: 0
-    drawMode: 0
-    adaptiveTiling: 0
-  m_AutoTiling: 0
-  serializedVersion: 2
-  m_Size: {x: 0.3, y: 1.7400002}
-  m_EdgeRadius: 0
---- !u!4 &764070330
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 764070328}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -0.07, y: -0.1, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_Children: []
-  m_Father: {fileID: 1556633772}
-  m_RootOrder: 2
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &826497249
 GameObject:
   m_ObjectHideFlags: 0
@@ -1257,7 +1086,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 45, y: 100}
-  m_SizeDelta: {x: 350, y: 53}
+  m_SizeDelta: {x: 450, y: 53}
   m_Pivot: {x: 0, y: 0}
 --- !u!114 &826497251
 MonoBehaviour:
@@ -1292,7 +1121,8 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: "!! \uB09C\uAC04 \uC624\uB974\uAE30 \uC5D4\uD130\uD0A4 !!"
+  m_Text: "!! \uB09C\uAC04 \uC624\uB974\uAE30 2\uCD08 \uB4A4\uC5D0 \uC790\uB3D9 \uC218\uD589
+    !!"
 --- !u!222 &826497252
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -2457,203 +2287,6 @@ Transform:
   m_Father: {fileID: 1487297896}
   m_RootOrder: 1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1556633767
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1556633772}
-  - component: {fileID: 1556633771}
-  - component: {fileID: 1556633770}
-  - component: {fileID: 1556633769}
-  - component: {fileID: 1556633768}
-  m_Layer: 6
-  m_Name: Player (1)
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1556633768
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1556633767}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d2610288bc128854998c4f0321fc3407, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  feetBox: {fileID: 679649005}
-  headBox: {fileID: 217744215}
-  bodyBox: {fileID: 764070329}
-  isDetectedGround: 0
-  isHitGround: 0
-  isDetectedCeil: 0
-  isHitCeil: 0
-  isHitWallT: 0
-  isHitWallB: 0
-  ledgeCheckingWidth: 0.04
-  ledgeCheckingHeight: 0.2
-  isHitLedgeHead: 0
-  isHitLedgeBody: 0
-  canCheckHangingBasic: 1
-  canCheckHangingSemi: 1
-  isHangingGround: 0
-  isRun: 0
-  preInputFrameIdleGround: 0
-  walkSpeed: 3.5
-  runSpeed: 7
-  maxFreeFallSpeed: 12
-  freeFallFrame: 39
-  preInputFrameFreeFall: 0
-  glidingSpeed: 0.05
-  glidingAccelFrameX: 39
-  glidingDeaccelFrameX: 26
-  preInputFrameIdleWall: 0
-  maxWallSlidingSpeed: 1.5
-  wallSlidingFrame: 26
-  ledgeHoldPos: {x: 0, y: 0}
-  ledgeEndPos: {x: 0, y: 0}
-  isLedgeAnimationEnded: 0
-  jumpGroundCount: 1
-  jumpGroundSpeed: 5.5
-  jumpGroundFrame: 18
-  jumpDownSpeed: 8.93
-  jumpDownFrame: 13
-  rollSpeed: 9.5
-  rollStartFrame: 6
-  rollInvincibilityFrame: 18
-  rollWakeUpFrame: 6
-  jumpAirCount: 1
-  jumpAirSpeed: 7.5
-  jumpAirIdleFrame: 3
-  jumpAirFrame: 20
-  dashCount: 1
-  dashSpeed: 36
-  dashIdleFrame: 6
-  dashInvincibilityFrame: 9
-  takeDownSpeed: 48
-  takeDownAirIdleFrame: 18
-  takeDownLandingIdleFrame: 12
-  jumpWallSpeedX: 7
-  jumpWallSpeedY: 10
-  jumpWallFrame: 13
-  jumpWallForceFrame: 6
---- !u!114 &1556633769
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1556633767}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fb1e8a26e87493a41b808f06eb048822, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  positive: {fileID: 217744215}
-  body: {fileID: 764070329}
-  negative: {fileID: 679649005}
-  shortSize: 0.3
-  bodyProportion: 6.8
-  direction: 0
-  offset: {x: -0.07, y: -0.1}
---- !u!50 &1556633770
-Rigidbody2D:
-  serializedVersion: 4
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1556633767}
-  m_BodyType: 0
-  m_Simulated: 1
-  m_UseFullKinematicContacts: 0
-  m_UseAutoMass: 0
-  m_Mass: 1
-  m_LinearDrag: 0
-  m_AngularDrag: 0.05
-  m_GravityScale: 1
-  m_Material: {fileID: 6200000, guid: fa9f795bb97c1ad43a779a85c3ce2f04, type: 2}
-  m_Interpolate: 0
-  m_SleepingMode: 1
-  m_CollisionDetection: 1
-  m_Constraints: 4
---- !u!212 &1556633771
-SpriteRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1556633767}
-  m_Enabled: 1
-  m_CastShadows: 0
-  m_ReceiveShadows: 0
-  m_DynamicOccludee: 1
-  m_StaticShadowCaster: 0
-  m_MotionVectors: 1
-  m_LightProbeUsage: 1
-  m_ReflectionProbeUsage: 1
-  m_RayTracingMode: 0
-  m_RayTraceProcedural: 0
-  m_RenderingLayerMask: 1
-  m_RendererPriority: 0
-  m_Materials:
-  - {fileID: 10754, guid: 0000000000000000f000000000000000, type: 0}
-  m_StaticBatchInfo:
-    firstSubMesh: 0
-    subMeshCount: 0
-  m_StaticBatchRoot: {fileID: 0}
-  m_ProbeAnchor: {fileID: 0}
-  m_LightProbeVolumeOverride: {fileID: 0}
-  m_ScaleInLightmap: 1
-  m_ReceiveGI: 1
-  m_PreserveUVs: 0
-  m_IgnoreNormalsForChartDetection: 0
-  m_ImportantGI: 0
-  m_StitchLightmapSeams: 1
-  m_SelectedEditorRenderState: 0
-  m_MinimumChartSize: 4
-  m_AutoUVMaxDistance: 0.5
-  m_AutoUVMaxAngle: 89
-  m_LightmapParameters: {fileID: 0}
-  m_SortingLayerID: 27737987
-  m_SortingLayer: 1
-  m_SortingOrder: 0
-  m_Sprite: {fileID: 21300000, guid: 1155f43d429201146b3d7bfb3607f805, type: 3}
-  m_Color: {r: 0.8657593, g: 1, b: 0.24056602, a: 1}
-  m_FlipX: 0
-  m_FlipY: 0
-  m_DrawMode: 0
-  m_Size: {x: 1, y: 1}
-  m_AdaptiveModeThreshold: 0.5
-  m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
-  m_MaskInteraction: 0
-  m_SpriteSortPoint: 0
---- !u!4 &1556633772
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1556633767}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 14.89, y: 7.95, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_Children:
-  - {fileID: 679649006}
-  - {fileID: 217744216}
-  - {fileID: 764070330}
-  m_Father: {fileID: 0}
-  m_RootOrder: 6
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1576007722
 GameObject:
   m_ObjectHideFlags: 0
@@ -2912,7 +2545,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &1820898522
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3285,7 +2918,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!212 &1916226413
 SpriteRenderer:
   m_ObjectHideFlags: 0
@@ -3328,7 +2961,7 @@ SpriteRenderer:
   m_SortingLayer: 1
   m_SortingOrder: 0
   m_Sprite: {fileID: 21300000, guid: 1155f43d429201146b3d7bfb3607f805, type: 3}
-  m_Color: {r: 0.21698111, g: 0.21698111, b: 0.21698111, a: 1}
+  m_Color: {r: 0.965797, g: 1, b: 0.4764151, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -3391,100 +3024,60 @@ MonoBehaviour:
   feetBox: {fileID: 1153664788}
   headBox: {fileID: 1423593882}
   bodyBox: {fileID: 1974913831}
-  canCheckLedgeHangingGround: 1
-  canCheckLedgeHangingThroughableGround: 1
-  isHangingOnGround: 0
-  canCheckGround: 1
-  canCheckGroundBasic: 1
-  canCheckGroundThroughable: 1
   isDetectedGround: 0
   isHitGround: 0
-  canCheckCeil: 1
   isDetectedCeil: 0
   isHitCeil: 0
-  isHitFeetSideWall: 0
-  isHitHeadSideWall: 0
-  moveDirection: {x: 0, y: 0}
-  canUpdateLookingDirection: 1
-  lookingDirection: 0
+  isHitWallT: 0
+  isHitWallB: 0
+  ledgeCheckingWidth: 0.04
+  ledgeCheckingHeight: 0.2
+  isHitLedgeHead: 0
+  isHitLedgeBody: 0
+  canCheckHangingBasic: 1
+  canCheckHangingSemi: 1
+  isHangingGround: 0
   isRun: 1
-  canCheckThroughableGroundToUp: 1
-  proceedIdleOnGroundFrame: 0
-  preInputFrame_IdleOnGround: 6
-  longIdleTransitionFrame: 900
-  proceedSitFrame: 0
-  proceedHeadUpFrame: 0
+  preInputFrameIdleGround: 0
+  idleLongTransitionFrame: 900
   walkSpeed: 3.5
   runSpeed: 7
   maxFreeFallSpeed: 24
   freeFallFrame: 18
-  proceedFreeFallFrame: 0
-  preInputFrame_FreeFall: 6
+  preInputFrameFreeFall: 0
   glidingSpeed: 0.05
   glidingAccelFrameX: 39
   glidingDeaccelFrameX: 26
-  proceedGlidingAccelFrameX: 0
-  leftGlidingDeaccelFrameX: 0
-  preInputFrame_IdleOnWall: 6
+  preInputFrameIdleWall: 0
   maxWallSlidingSpeed: 1.5
   wallSlidingFrame: 26
-  proceedWallSlidingFrame: 0
-  canCheckLedge: 1
-  isHitLedge: 0
-  ledgeCornerTopPos: {x: 0, y: 0}
-  ledgeCornerSidePos: {x: 0, y: 0}
-  ledgeTeleportPos: {x: 0, y: 0}
-  isEndOfLedgeAnimation: 0
-  jumpOnGroundCount: 1
-  jumpOnGroundSpeed: 20
-  jumpOnGroundFrame: 20
-  leftJumpOnGroundCount: 0
-  leftJumpOnGroundFrame: 0
-  isCancelOfJumpOnGround: 0
+  ledgeHoldPos: {x: 0, y: 0}
+  ledgeEndPos: {x: 0, y: 0}
+  isLedgeAnimationEnded: 0
+  jumpGroundCount: 1
+  jumpGroundSpeed: 5.5
+  jumpGroundFrame: 18
   jumpDownSpeed: 1.5
   jumpDownFrame: 13
-  currentJumpDownGround: {fileID: 0}
-  leftJumpDownFrame: 0
   rollSpeed: 9.5
   rollStartFrame: 6
   rollInvincibilityFrame: 18
   rollWakeUpFrame: 6
-  leftRollStartFrame: 0
-  leftRollInvincibilityFrame: 0
-  leftRollWakeUpFrame: 0
-  leftRollFrame: 0
-  rollLookingDirection: 0
-  jumpOnAirCount: 1
-  jumpOnAirSpeed: 7.5
-  jumpOnAirIdleFrame: 3
-  jumpOnAirFrame: 20
-  leftJumpOnAirCount: 0
-  leftJumpOnAirIdleFrame: 0
-  leftJumpOnAirFrame: 0
-  isCancelOfJumpOnAir: 0
+  jumpAirCount: 1
+  jumpAirSpeed: 7.5
+  jumpAirIdleFrame: 3
+  jumpAirFrame: 20
   dashCount: 1
   dashSpeed: 36
   dashIdleFrame: 6
   dashInvincibilityFrame: 9
-  leftDashCount: 0
-  leftDashIdleFrame: 0
-  leftDashInvincibilityFrame: 0
-  dashLookingDirection: 0
   takeDownSpeed: 48
   takeDownAirIdleFrame: 18
   takeDownLandingIdleFrame: 12
-  leftTakeDownAirIdleFrame: 0
-  leftTakeDownLandingIdleFrame: 0
-  isLandingAfterTakeDown: 0
-  jumpOnWallSpeedX: 7
-  jumpOnWallSpeedY: 10
-  jumpOnWallFrame: 13
-  jumpOnWallForceFrame: 6
-  leftJumpOnWallFrame: 0
-  leftJumpOnWallForceFrame: 0
-  jumpOnWallLookingDirection: 0
-  isCancelOfJumpOnWallX: 0
-  isCancelOfJumpOnWallXY: 0
+  jumpWallSpeedX: 7
+  jumpWallSpeedY: 10
+  jumpWallFrame: 13
+  jumpWallForceFrame: 6
 --- !u!114 &1916226417
 MonoBehaviour:
   m_ObjectHideFlags: 0

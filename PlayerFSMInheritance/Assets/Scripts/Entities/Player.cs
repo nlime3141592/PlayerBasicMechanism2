@@ -1,83 +1,103 @@
 using System;
-using System.Diagnostics;
-using System.Collections;
-using System.Collections.Generic;
-using System.IO;
 using System.Threading;
-using System.Threading.Tasks;
-
 using UnityEngine;
 
-// Player class
+// 최적화 코드
 public class Player : Entity
 {
     #region Components
     private SpriteRenderer spRenderer;
-
+    private ElongatedHexagonCollider2D hexaCol;
+    private Vector2 hexaColOffset;
     #endregion
+
     #region Player State Constants
-    private const int stIdleOnGround = 0;
-    private const int stIdleLongOnGround = 1;
+    private const int stIdleGround = 0;
+    private const int stIdleGroundLong = 1;
     private const int stSit = 2;
     private const int stHeadUp = 3;
     private const int stWalk = 4;
     private const int stRun = 5;
     private const int stFreeFall = 6;
     private const int stGliding = 7;
-    private const int stIdleOnWall = 8;
+    private const int stIdleWall = 8;
     private const int stWallSliding = 9;
-    private const int stLedgeClimb = 10;
-    private const int stJumpOnGround = 11;
-    private const int stJumpDown = 12;
-    private const int stRoll = 13;
-    private const int stJumpOnAir = 14;
-    private const int stDash = 15;
-    private const int stTakeDown = 16;
-    private const int stJumpOnWall = 17;
+    private const int stLedgeClimbHead = 10;
+    private const int stLedgeClimbBody = 11;
+    private const int stJumpGround = 12;
+    private const int stJumpDown = 13;
+    private const int stRoll = 14;
+    private const int stJumpAir = 15;
+    private const int stDash = 16;
+    private const int stTakeDown = 17;
+    private const int stJumpWall = 18;
     #endregion
 
-    // Entity Physics
+    // NOTE: 플레이어 초기 위치, 테스트를 위한 벡터 변수, 릴리즈 시 제거해야 함.
     private Vector2 initialPosition;
-    protected Vector2 feetPos;
-    protected Vector2 headPos;
-    protected Vector2 bodyPos;
-    protected Vector2 feetSidePos;
-    protected Vector2 headSidePos;
-    protected Vector2 leftLedgeHangingPos;
-    protected Vector2 rightLedgeHangingPos;
 
-    public bool canCheckLedgeHangingGround = true;
-    public bool canCheckLedgeHangingThroughableGround = true;
-    protected RaycastHit2D leftHangingGround;
-    protected RaycastHit2D rightHangingGround;
-    public bool isHangingOnGround;
+    // 충돌 판정의 특이점들 (singular points)
+    private Bounds hBounds;
+    private Bounds fBounds;
+    private Bounds cBounds;
+    protected Vector2 hPos; // Head Position
+    protected Vector2 hlPos; // Head Left Position
+    protected Vector2 hrPos; // Head Right Position
+    protected Vector2 fPos; // Feet Position
+    protected Vector2 flPos; // Feet Left Position
+    protected Vector2 frPos; // Feet Right Position
+    protected Vector2 cPos; // Center Position (Body Position)
+    protected Vector2 clPos;
+    protected Vector2 crPos;
+    protected Vector2 ltPos; // Left Top Position
+    protected Vector2 lbPos; // Left Bottom Position
+    protected Vector2 rtPos; // Right Top Position
+    protected Vector2 rbPos; // Right Bottom Position
 
-    public bool canCheckGround = true;
-    public bool canCheckGroundBasic = true;
-    public bool canCheckGroundThroughable = true;
-    public RaycastHit2D detectedGround;
+    // Check Ground
+    protected bool canCheckBasicGround = true;
+    protected bool canCheckSemiGround = true;
+    protected RaycastHit2D detectedGround;
     public bool isDetectedGround;
     public bool isHitGround;
 
-    public bool canCheckCeil = true;
-    public RaycastHit2D detectedCeil;
+    // Check Ceil
+    protected bool canCheckCeil = true;
+    protected RaycastHit2D detectedCeil;
     public bool isDetectedCeil;
     public bool isHitCeil;
 
-    public RaycastHit2D detectedFeetSideWall;
-    public int isHitFeetSideWall;
+    // Check Wall
+    protected bool canCheckWallT = true;
+    protected bool canCheckWallB = true;
+    protected RaycastHit2D detectedWallT;
+    protected RaycastHit2D detectedWallB;
+    public int isHitWallT;
+    public int isHitWallB;
 
-    public RaycastHit2D detectedHeadSideWall;
-    public int isHitHeadSideWall;
+    // Check Head-Over Semi Ground
+    protected bool canCheckHeadOverSemiGround = true;
+    protected RaycastHit2D headOverSemiGroundBefore;
+    protected RaycastHit2D headOverSemiGroundCurrent;
+    private RaycastHit2D[] headOverSemiGroundBefores;
+    private RaycastHit2D[] headOverSemiGroundCurrents;
 
-    public Vector2 moveDirection;
-    public bool canUpdateLookingDirection = true;
-    public int lookingDirection = 1;
-    public bool isRun = false;
-    
-    public bool canCheckThroughableGroundToUp = true;
-    public RaycastHit2D headThroughableGroundBefore;
-    public RaycastHit2D headThroughableGround;
+    // Check Ledge
+    protected bool canCheckLedge = true;
+    protected RaycastHit2D detectedLedge;
+    public float ledgeCheckingWidth = 0.04f;
+    public float ledgeCheckingHeight = 0.2f;
+    protected Vector2 ledgeCornerTopPos;
+    protected Vector2 ledgeCornerSidePos;
+    public bool isHitLedgeHead;
+    public bool isHitLedgeBody;
+
+    // Check Ledge Hanging
+    public bool canCheckHangingBasic = true;
+    public bool canCheckHangingSemi = true;
+    protected RaycastHit2D leftHangingGround;
+    protected RaycastHit2D rightHangingGround;
+    public bool isHangingGround;
 
     // Input Handling
     private InputData inputData;
@@ -85,79 +105,86 @@ public class Player : Entity
     private uint preInputPressing = 0;
     private uint preInputDown = 0;
 
+    // 플레이어 이동 관련 속성
+    private bool canUpdateLookDir = true;
+    private int lookDir;
+    public bool isRun;
+    protected float vx; // NOTE: 값 임시 저장을 위한 변수
+    protected float vy; // NOTE: 값 임시 저장을 위한 변수
+    protected Vector2 moveDir;
+
     #region State Constants and Variables
-    private StateMachine machine;
+    // common state options
     public int currentState => machine.state;
+    private StateMachine machine;
 
-    // stIdleOnGround options
-    public int proceedIdleOnGroundFrame;
-    public int preInputFrame_IdleOnGround;
+    // stIdleGround options
+    private int proceedIdleGroundFrame;
+    public int preInputFrameIdleGround;
 
-    // stLongIdleOnGround options
-    public int longIdleTransitionFrame = 900;
+    // stIdleGroundLong options
+    // TODO: 외부 클래스에서 접근해야 할 필요가 있음.
+    public int idleLongTransitionFrame = 900;
 
     // stSit options
-    public int proceedSitFrame;
-    public RaycastHit2D sitThroughableGround;
+    // TODO: 외부 클래스에서 접근해야 할 필요가 있음.
+    private int proceedSitFrame;
+    private RaycastHit2D currentSitGround;
 
     // stHeadUp options
-    public int proceedHeadUpFrame;
+    // TODO: 외부 클래스에서 접근해야 할 필요가 있음.
+    private int proceedHeadUpFrame;
 
     // stWalk options
     public float walkSpeed = 3.5f;
 
     // stRun options
-    public float runSpeed = 7.5f;
+    public float runSpeed = 7.0f;
 
     // stFreeFall options
     public float maxFreeFallSpeed = 12.0f;
     public int freeFallFrame = 39;
     private DiscreteGraph freeFallGraph;
-    public int proceedFreeFallFrame;
-    public int preInputFrame_FreeFall;
+    private int proceedFreeFallFrame;
+    public int preInputFrameFreeFall;
 
     // stGliding options
-    public float glidingSpeed = 3.5f;
+    public float glidingSpeed = 0.05f;
     public int glidingAccelFrameX = 39;
     public int glidingDeaccelFrameX = 26;
     private DiscreteGraph glidingAccelGraphX;
     private DiscreteGraph glidingDeaccelGraphX;
-    public int proceedGlidingAccelFrameX;
-    public int leftGlidingDeaccelFrameX;
+    private int proceedGlidingAccelFrameX;
+    private int leftGlidingDeaccelFrameX;
 
     // stIdleOnWall options
-    public int preInputFrame_IdleOnWall;
+    public int preInputFrameIdleWall;
 
     // stWallSliding options
     public float maxWallSlidingSpeed = 1.5f;
     public int wallSlidingFrame = 26;
     private DiscreteGraph wallSlidingGraph;
-    public int proceedWallSlidingFrame;
+    private int proceedWallSlidingFrame;
 
     // stLedgeClimb options
-    public bool canCheckLedge;
-    public RaycastHit2D detectedLedge;
-    public bool isHitLedge;
-    public Vector2 ledgeCornerTopPos;
-    public Vector2 ledgeCornerSidePos;
-    public Vector2 ledgeTeleportPos;
-    public bool isEndOfLedgeAnimation;
+    public Vector2 ledgeHoldPos;
+    public Vector2 ledgeEndPos;
+    public bool isLedgeAnimationEnded;
 
-    // stJumpOnGround options
-    public int jumpOnGroundCount = 1;
-    public float jumpOnGroundSpeed = 5.5f;
-    public int jumpOnGroundFrame = 18;
-    private DiscreteGraph jumpOnGroundGraph;
-    public int leftJumpOnGroundCount;
-    public int leftJumpOnGroundFrame;
-    public bool isCancelOfJumpOnGround;
+    // stJumpGround options
+    public int jumpGroundCount = 1;
+    public float jumpGroundSpeed = 5.5f;
+    public int jumpGroundFrame = 18;
+    private DiscreteGraph jumpGroundGraph;
+    private int leftJumpGroundCount;
+    private int leftJumpGroundFrame;
+    private bool isJumpGroundCanceled;
 
     // stJumpDown options
     public float jumpDownSpeed = 1.5f;
     public int jumpDownFrame = 13;
     private DiscreteGraph jumpDownGraph;
-    public Collider2D currentJumpDownGround; // layer of "ThroughableGround" only.
-    public int leftJumpDownFrame;
+    private int leftJumpDownFrame;
 
     // stRoll options
     public float rollSpeed = 9.5f;
@@ -165,110 +192,107 @@ public class Player : Entity
     public int rollInvincibilityFrame = 18;
     public int rollWakeUpFrame = 6;
     private DiscreteGraph rollGraph;
-    public int leftRollStartFrame;
-    public int leftRollInvincibilityFrame;
-    public int leftRollWakeUpFrame;
-    public int leftRollFrame;
-    public int rollLookingDirection;
+    private int leftRollStartFrame;
+    private int leftRollInvincibilityFrame;
+    private int leftRollWakeUpFrame;
+    private int leftRollFrame;
+    private int rollLookDir;
 
-    // stJumpOnAir options
-    public int jumpOnAirCount = 1;
-    public float jumpOnAirSpeed = 7.5f;
-    public int jumpOnAirIdleFrame = 3;
-    public int jumpOnAirFrame = 20;
-    private DiscreteGraph jumpOnAirGraph;
-    public int leftJumpOnAirCount;
-    public int leftJumpOnAirIdleFrame;
-    public int leftJumpOnAirFrame;
-    public bool isCancelOfJumpOnAir;
+    // stJumpAir options
+    public int jumpAirCount = 1;
+    public float jumpAirSpeed = 7.5f;
+    public int jumpAirIdleFrame = 3;
+    public int jumpAirFrame = 20;
+    private DiscreteGraph jumpAirGraph;
+    private int leftJumpAirCount;
+    private int leftJumpAirIdleFrame;
+    private int leftJumpAirFrame;
+    private bool isJumpAirCanceled;
 
     // stDash options
     public int dashCount = 1;
-    public float dashSpeed = 36;
+    public float dashSpeed = 36.0f;
     public int dashIdleFrame = 6;
     public int dashInvincibilityFrame = 9;
     private DiscreteGraph dashGraph;
-    public int leftDashCount;
-    public int leftDashIdleFrame;
-    public int leftDashInvincibilityFrame;
-    public int dashLookingDirection;
+    private int leftDashCount;
+    private int leftDashIdleFrame;
+    private int leftDashInvincibilityFrame;
+    private int dashLookDir;
 
-    // stTakeDown
-    public float takeDownSpeed = 48;
+    // stTakeDown options
+    public float takeDownSpeed = 48.0f;
     public int takeDownAirIdleFrame = 18;
     public int takeDownLandingIdleFrame = 12;
-    public int leftTakeDownAirIdleFrame;
-    public int leftTakeDownLandingIdleFrame;
-    public bool isLandingAfterTakeDown;
+    private int leftTakeDownAirIdleFrame;
+    private int leftTakeDownLandingIdleFrame;
+    private bool isTakeDownAirIdleEnded;
+    private bool isLandingAfterTakeDown;
 
-    // stJumpOnWall
-    public float jumpOnWallSpeedX = 7;
-    public float jumpOnWallSpeedY = 10;
-    public int jumpOnWallFrame = 13;
-    public int jumpOnWallForceFrame = 6;
-    private DiscreteGraph jumpOnWallGraphX;
-    private DiscreteGraph jumpOnWallGraphY;
-    public int leftJumpOnWallFrame;
-    public int leftJumpOnWallForceFrame;
-    public int jumpOnWallLookingDirection;
-    public bool isCancelOfJumpOnWallX;
-    public bool isCancelOfJumpOnWallXY;
+    // stJumpWall options
+    public float jumpWallSpeedX = 7.0f;
+    public float jumpWallSpeedY = 10.0f;
+    public int jumpWallFrame = 13;
+    public int jumpWallForceFrame = 6;
+    private DiscreteGraph jumpWallGraphX;
+    private DiscreteGraph jumpWallGraphY;
+    private int leftJumpWallFrame;
+    private int leftJumpWallForceFrame;
+    private int jumpWallLookDir;
+    private bool isJumpWallCanceledX;
+    private bool isJumpWallCanceledXY;
     #endregion
 
-    // Update Physics
-    protected void UpdateFeetPosition()
+    private void m_UpdatePositions()
     {
-        feetPos.Set(feetBox.bounds.center.x, feetBox.bounds.min.y);
+        hBounds = headBox.bounds;
+        fBounds = feetBox.bounds;
+        cBounds = bodyBox.bounds;
+        hPos.Set(hBounds.center.x, hBounds.max.y);
+        hlPos.Set(hBounds.min.x, hBounds.center.y);
+        hrPos.Set(hBounds.max.x, hBounds.center.y);
+        fPos.Set(fBounds.center.x, fBounds.min.y);
+        flPos.Set(fBounds.min.x, fBounds.center.y);
+        frPos.Set(fBounds.max.x, fBounds.center.y);
+        cPos.Set(cBounds.center.x, cBounds.center.y);
+        clPos.Set(cBounds.min.x, cBounds.center.y);
+        crPos.Set(cBounds.max.x, cBounds.center.y);
+        ltPos.Set(hBounds.min.x, hBounds.min.y);
+        lbPos.Set(fBounds.min.x, fBounds.max.y);
+        rtPos.Set(hBounds.max.x, hBounds.min.y);
+        rbPos.Set(fBounds.max.x, fBounds.max.y);
     }
 
-    protected void UpdateHeadPosition()
+    protected void UpdateLookDir()
     {
-        headPos.Set(headBox.bounds.center.x, headBox.bounds.max.y);
-    }
+        if(lookDir == 0)
+            lookDir = 1;
 
-    protected void UpdateBodyPosition()
-    {
-        bodyPos.Set(bodyBox.transform.position.x, bodyBox.transform.position.y);
-    }
-
-    protected void UpdateSidePosition()
-    {
-        float fx = feetBox.bounds.center.x + feetBox.bounds.extents.x * lookingDirection;
-        float fy = feetBox.bounds.max.y;
-
-        float hx = headBox.bounds.center.x + headBox.bounds.extents.x * lookingDirection;
-        float hy = headBox.bounds.min.y;
-
-        feetSidePos.Set(fx, fy);
-        headSidePos.Set(hx, hy);
-    }
-
-    protected void UpdateLookingDirection(int xNegative, int xPositive)
-    {
-        if(lookingDirection == 0)
-            lookingDirection = 1;
-
-        if(!canUpdateLookingDirection)
+        if(!canUpdateLookDir)
             return;
 
-        int xInput = xNegative + xPositive;
+        int xInput = inputData.xNegative + inputData.xPositive;
 
         if(xInput != 0)
-            lookingDirection = xInput;
+        {
+            lookDir = xInput;
+            hexaCol.offset = new Vector2(hexaColOffset.x * lookDir, hexaColOffset.y);
+            spRenderer.flipX = (lookDir == 1); 
+        }
     }
 
     protected void UpdateMoveDirection()
     {
         if(isHitGround)
         {
-            float x = detectedGround.normal.y;
-            float y = -detectedGround.normal.x;
+            vx = detectedGround.normal.y;
+            vy = -detectedGround.normal.x;
 
-            moveDirection.Set(x, y);
+            moveDir.Set(vx, vy);
         }
         else
         {
-            moveDirection.Set(1.0f, 0.0f);
+            moveDir.Set(1.0f, 0.0f);
         }
     }
 
@@ -277,136 +301,209 @@ public class Player : Entity
         return isRun ? runSpeed : walkSpeed;
     }
 
-    protected float CheckVelocityX(float vx)
+    protected float CheckVelocityX(float currentVx)
     {
-        if(inputData.xInput == lookingDirection && (isHitFeetSideWall == lookingDirection || isHitHeadSideWall == lookingDirection))
+        if(inputData.xInput == lookDir && (isHitWallT == lookDir || isHitWallB == lookDir))
             return 0.0f;
 
-        return vx;
+        return currentVx;
+    }
+// (Check Ground)/(Ceil)/(Wall)/(Head-Over Semi Ground)/(Ledge)/(Ledge Hanging)
+    protected void CheckGround()
+    {
+        CheckGroundAll(out detectedGround, out isDetectedGround, fPos, 0.5f);
+
+        if(!isDetectedGround)
+        {
+            isHitGround = false;
+        }
+        else if(detectedGround.collider.gameObject.layer == LayerInfo.ground)
+            isHitGround = detectedGround.distance <= 0.04f;
+        else if(detectedGround.collider.gameObject.layer == LayerInfo.throughableGround)
+        {
+            if(base.CanCollision(detectedGround.collider))
+            {
+                isHitGround = detectedGround.distance <= 0.04f;
+            }
+            else
+            {
+                detectedGround = default(RaycastHit2D);
+                isDetectedGround = false;
+                isHitGround = false;
+            }
+        }
     }
 
-    protected void CheckLedgeHanging()
+    protected void CheckCeil()
     {
-        leftLedgeHangingPos.Set(feetBox.bounds.min.x, feetBox.bounds.center.y);
-        rightLedgeHangingPos.Set(feetBox.bounds.max.x, feetBox.bounds.center.y);
+        if(canCheckCeil)
+        {
+            CheckCeil(out detectedCeil, out isHitCeil, hPos, 0.04f);
+        }
+        else
+        {
+            detectedCeil = default(RaycastHit2D);
+            isHitCeil = false;
+        }
+    }
+
+    protected void CheckWall()
+    {
+        Vector2 fsPos = Vector2.zero;
+        Vector2 hsPos = Vector2.zero;
+
+        if(lookDir == 1)
+        {
+            fsPos = rbPos;
+            hsPos = rtPos;
+        }
+        else if(lookDir == -1)
+        {
+            fsPos = lbPos;
+            hsPos = ltPos;
+        }
 
         float detectLength = 0.04f;
-        int layer = 0;
-        if(canCheckLedgeHangingGround)
-            layer |= LayerInfo.groundMask;
-        if(canCheckLedgeHangingThroughableGround)
-            layer |= LayerInfo.throughableGroundMask;
 
-        leftHangingGround = Physics2D.Raycast(leftLedgeHangingPos, Vector2.down, detectLength, layer);
-        rightHangingGround = Physics2D.Raycast(rightLedgeHangingPos, Vector2.down, detectLength, layer);
-
-        isHangingOnGround = leftHangingGround || rightHangingGround;
+        base.CheckWall(out detectedWallB, out isHitWallB, fsPos, detectLength, lookDir);
+        base.CheckWall(out detectedWallT, out isHitWallT, hsPos, detectLength, lookDir);
     }
 
-    // Terrain Checker
+    protected void CheckHeadOverSemiGround()
+    {
+        float detectLength = base.height + 0.5f;
+        int layer = LayerInfo.throughableGroundMask;
+
+        headOverSemiGroundBefores = headOverSemiGroundCurrents;
+        headOverSemiGroundCurrents = Physics2D.RaycastAll(fPos, Vector2.up, detectLength, layer);
+
+        if(headOverSemiGroundBefores == null || headOverSemiGroundCurrents == null)
+            return;
+
+        for(int i = 0; i < headOverSemiGroundCurrents.Length; i++)
+        {
+            bool exist = Array.Exists<RaycastHit2D>(headOverSemiGroundBefores, (element) => element.collider == headOverSemiGroundCurrents[i].collider);
+            bool canCollision = base.CanCollision(headOverSemiGroundCurrents[i].collider);
+
+            if(!exist && canCollision)
+                base.IgnoreCollision(headOverSemiGroundCurrents[i].collider);
+        }
+
+        for(int i = 0; i < headOverSemiGroundBefores.Length; i++)
+        {
+            bool exist = Array.Exists<RaycastHit2D>(headOverSemiGroundCurrents, (element) => element.collider == headOverSemiGroundBefores[i].collider);
+            bool canCollision = base.CanCollision(headOverSemiGroundBefores[i].collider);
+
+            if(!exist && !canCollision)
+                base.AcceptCollision(headOverSemiGroundBefores[i].collider);
+        }
+    }
+
     protected void CheckLedge()
     {
         if(!canCheckLedge)
         {
-            isHitLedge = false;
+            isHitLedgeHead = false;
+            isHitLedgeBody = false;
             detectedLedge = default(RaycastHit2D);
-            ledgeCornerTopPos = Vector2.zero;
-            ledgeCornerSidePos = Vector2.zero;
+            ledgeCornerTopPos.Set(0.0f, 0.0f);
+            ledgeCornerSidePos.Set(0.0f, 0.0f);
             return;
         }
 
         int layer = LayerInfo.groundMask;
+        Vector2 sidePos = Vector2.zero;
+        Vector2 sideOverPos = Vector2.zero;
+        Vector2 bodyPos = Vector2.zero;
+        Vector2 detectDir = Vector2.zero;
 
-        float detectLength = 0.04f;
-        float offsetLength = 0.2f;
-        Vector2 headSideTopPos = headSidePos + Vector2.up * offsetLength;
-        Vector2 detectDir = Vector2.right * lookingDirection;
-
-        RaycastHit2D headSide = Physics2D.Raycast(headSidePos, detectDir, detectLength, layer);
-        RaycastHit2D headTopSide = Physics2D.Raycast(headSideTopPos, detectDir, detectLength, layer);
-
-        if(headSide && !headTopSide)
+        if(lookDir == 1)
         {
-            isHitLedge = true;
+            sidePos = rtPos;
+            sideOverPos.Set(hrPos.x, hrPos.y + ledgeCheckingHeight);
+            bodyPos = crPos;
+            detectDir.Set(1.0f, 0.0f);
+        }
+        else if(lookDir == -1)
+        {
+            sidePos = ltPos;
+            sideOverPos.Set(hlPos.x, hlPos.y + ledgeCheckingHeight);
+            bodyPos = clPos;
+            detectDir.Set(-1.0f, 0.0f);
+        }
 
+        RaycastHit2D sideHit = Physics2D.Raycast(sidePos, detectDir, ledgeCheckingWidth, layer);
+        RaycastHit2D sideOverHit = Physics2D.Raycast(sideOverPos, detectDir, ledgeCheckingWidth, layer);
+        RaycastHit2D bodyHit = Physics2D.Raycast(bodyPos, detectDir, ledgeCheckingWidth, layer);
+
+        isHitLedgeHead = !sideOverHit &&sideHit;
+        isHitLedgeBody = !sideOverHit &&bodyHit;
+
+        bool a = sideOverHit;
+        bool b = isHitLedgeHead;
+        bool c = isHitLedgeBody;
+
+        if(!sideOverHit && (isHitLedgeHead || isHitLedgeBody))
+        {
             float adder = 0.1f;
-            float distance = (headSide.distance + adder) * lookingDirection;
-            detectedLedge = Physics2D.Raycast(headSideTopPos + Vector2.right * distance, Vector2.down, offsetLength, layer);
+            float distance = (sideHit.distance + adder) * lookDir;
+            float height = base.height;
+
+            detectedLedge = Physics2D.Raycast(sideOverPos + Vector2.right * distance, Vector2.down, height, layer);
+            bool d = detectedLedge;
             ledgeCornerTopPos.Set(detectedLedge.point.x, detectedLedge.point.y);
-            ledgeCornerSidePos.Set(detectedLedge.point.x - adder * lookingDirection, detectedLedge.point.y - adder);
+            ledgeCornerSidePos.Set(detectedLedge.point.x - adder * lookDir, detectedLedge.point.y - adder);
         }
         else
         {
-            isHitLedge = false;
             detectedLedge = default(RaycastHit2D);
-            ledgeCornerTopPos = Vector2.zero;
-            ledgeCornerSidePos = Vector2.zero;
+            ledgeCornerTopPos.Set(0.0f, 0.0f);
+            ledgeCornerSidePos.Set(0.0f, 0.0f);
         }
     }
 
-    protected void CheckThroughableToUp(ref RaycastHit2D before, ref RaycastHit2D current)
+    protected void CheckLedgeHanging()
     {
-        before = current;
+        float detectLength = 0.04f;
+        int layer = LayerInfo.groundMask | LayerInfo.throughableGroundMask;
 
-        if(!canCheckThroughableGroundToUp)
+        leftHangingGround = Physics2D.Raycast(flPos, Vector2.down, detectLength, layer);
+        rightHangingGround = Physics2D.Raycast(frPos, Vector2.down, detectLength, layer);
+
+        bool lExist = leftHangingGround;
+        bool rExist = rightHangingGround;
+        Collider2D lCol = null;
+        Collider2D rCol = null;
+        int lLayer = 0;
+        int rLayer = 0;
+        bool lRes = false;
+        bool rRes = false;
+
+        if(lExist)
         {
-            current = default(RaycastHit2D);
+            lCol = leftHangingGround.collider;
+            lLayer = lCol.gameObject.layer;
 
-            canCheckGround = true;
-            canCheckCeil = true;
-            canCheckLedgeHangingGround = true;
-            canCheckLedgeHangingThroughableGround = true;
-            return;
+            if(lLayer == LayerInfo.ground)
+                lRes = true;
+            else if(lLayer == LayerInfo.throughableGround && base.CanCollision(lCol))
+                lRes = true;
+        }
+        if(rExist)
+        {
+            rCol = rightHangingGround.collider;
+            rLayer = rCol.gameObject.layer;
+
+            if(rLayer == LayerInfo.ground)
+                rRes = true;
+            else if(rLayer == LayerInfo.throughableGround && base.CanCollision(rCol))
+                rRes = true;
         }
 
-        float detectLength = base.height + 0.5f;
-        int layer = LayerInfo.throughableGroundMask;
-
-        before = current;
-        current = Physics2D.Raycast(feetPos, Vector2.up, detectLength, layer);
-
-        if(before)
-        {
-            if(!current)
-            {
-                AcceptCollision(before.collider);
-            }
-            else if(before.collider != current.collider)
-            {
-                AcceptCollision(before.collider);
-                IgnoreCollision(current.collider);
-            }
-        }
-        else if(current)
-        {
-            IgnoreCollision(current.collider);
-        }
-
-        if(current)
-        {
-            canCheckGround = false;
-            canCheckCeil = false;
-            canCheckLedgeHangingGround = true;
-            canCheckLedgeHangingThroughableGround = false;
-        }
-        else
-        {
-            canCheckGround = true;
-            canCheckCeil = true;
-            canCheckLedgeHangingGround = true;
-            canCheckLedgeHangingThroughableGround = true;
-        }
+        isHangingGround = lRes | rRes;
     }
 
-    protected void CheckThroughableToDown(out RaycastHit2D ground)
-    {
-        float detectLength = base.height + 0.5f;
-        int layer = LayerInfo.throughableGroundMask;
-
-        ground = Physics2D.Raycast(headPos, Vector2.down, detectLength, layer);
-    }
-
-    // Unity Event Functions
+    #region Unity Event Functions
     protected override void Start()
     {
         base.Start();
@@ -415,27 +512,30 @@ public class Player : Entity
         initialPosition = transform.position;
 
         spRenderer = GetComponent<SpriteRenderer>();
+        hexaCol = GetComponent<ElongatedHexagonCollider2D>();
+        hexaColOffset = hexaCol.offset;
 
-        machine = new StateMachine(stIdleOnGround);
+        machine = new StateMachine(stIdleGround);
 
-        machine.SetCallbacks(stIdleOnGround, Input_IdleOnGround, Logic_IdleOnGround, Enter_IdleOnGround, End_IdleOnGround);
-        machine.SetCallbacks(stIdleLongOnGround, Input_IdleLongOnGround, Logic_IdleLongOnGround, Enter_IdleLongOnGround, null);
+        machine.SetCallbacks(stIdleGround, Input_IdleGround, Logic_IdleGround, Enter_IdleGround, End_IdleGround);
+        machine.SetCallbacks(stIdleGroundLong, Input_IdleGroundLong, Logic_IdleGroundLong, Enter_IdleGroundLong, null);
         machine.SetCallbacks(stSit, Input_Sit, Logic_Sit, Enter_Sit, End_Sit);
         machine.SetCallbacks(stHeadUp, Input_HeadUp, Logic_HeadUp, Enter_HeadUp, End_HeadUp);
         machine.SetCallbacks(stWalk, Input_Walk, Logic_Walk, Enter_Walk, null);
         machine.SetCallbacks(stRun, Input_Run, Logic_Run, Enter_Run, null);
         machine.SetCallbacks(stFreeFall, Input_FreeFall, Logic_FreeFall, Enter_FreeFall, null);
         machine.SetCallbacks(stGliding, Input_Gliding, Logic_Gliding, Enter_Gliding, null);
-        machine.SetCallbacks(stIdleOnWall, Input_IdleOnWall, Logic_IdleOnWall, Enter_IdleOnWall, null);
+        machine.SetCallbacks(stIdleWall, Input_IdleWall, Logic_IdleWall, Enter_IdleWall, null);
         machine.SetCallbacks(stWallSliding, Input_WallSliding, Logic_WallSliding, Enter_WallSliding, null);
-        machine.SetCallbacks(stLedgeClimb, Input_LedgeClimb, Logic_LedgeClimb, Enter_LedgeClimb, End_LedgeClimb);
-        machine.SetCallbacks(stJumpOnGround, Input_JumpOnGround, Logic_JumpOnGround, Enter_JumpOnGround, null);
-        machine.SetCallbacks(stJumpDown, Input_JumpDown, Logic_JumpDown, Enter_JumpDown, End_JumpDown);
+        machine.SetCallbacks(stLedgeClimbHead, Input_LedgeClimbHead, Logic_LedgeClimbHead, Enter_LedgeClimbHead, End_LedgeClimbHead);
+        machine.SetCallbacks(stLedgeClimbBody, Input_LedgeClimbBody, Logic_LedgeClimbBody, Enter_LedgeClimbBody, End_LedgeClimbBody);
+        machine.SetCallbacks(stJumpGround, Input_JumpGround, Logic_JumpGround, Enter_JumpGround, null);
+        machine.SetCallbacks(stJumpDown, Input_JumpDown, Logic_JumpDown, Enter_JumpDown, null);
         machine.SetCallbacks(stRoll, Input_Roll, Logic_Roll, Enter_Roll, null);
-        machine.SetCallbacks(stJumpOnAir, Input_JumpOnAir, Logic_JumpOnAir, Enter_JumpOnAir, null);
+        machine.SetCallbacks(stJumpAir, Input_JumpAir, Logic_JumpAir, Enter_JumpAir, null);
         machine.SetCallbacks(stDash, Input_Dash, Logic_Dash, Enter_Dash, null);
-        machine.SetCallbacks(stTakeDown, Input_TakeDown, Logic_TakeDown, Enter_TakeDown, null);
-        machine.SetCallbacks(stJumpOnWall, Input_JumpOnWall, Logic_JumpOnWall, Enter_JumpOnWall, null);
+        machine.SetCallbacks(stTakeDown, Input_TakeDown, Logic_TakeDown, Enter_TakeDown, End_TakeDown);
+        machine.SetCallbacks(stJumpWall, Input_JumpWall, Logic_JumpWall, Enter_JumpWall, null);
 
         InitGraphs();
     }
@@ -446,13 +546,13 @@ public class Player : Entity
         glidingAccelGraphX = new DiscreteLinearGraph(glidingAccelFrameX);
         glidingDeaccelGraphX = new DiscreteLinearGraph(glidingDeaccelFrameX);
         wallSlidingGraph = new DiscreteLinearGraph(wallSlidingFrame);
-        jumpOnGroundGraph = new DiscreteLinearGraph(jumpOnGroundFrame);
+        jumpGroundGraph = new DiscreteLinearGraph(jumpGroundFrame);
         jumpDownGraph = new DiscreteLinearGraph(jumpDownFrame);
         rollGraph = new DiscreteLinearGraph(rollStartFrame + rollInvincibilityFrame + rollWakeUpFrame);
-        jumpOnAirGraph = new DiscreteLinearGraph(jumpOnAirFrame);
+        jumpAirGraph = new DiscreteLinearGraph(jumpAirFrame);
         dashGraph = new DiscreteLinearGraph(dashInvincibilityFrame);
-        jumpOnWallGraphX = new DiscreteLinearGraph(jumpOnWallFrame);
-        jumpOnWallGraphY = new DiscreteLinearGraph(jumpOnWallFrame);
+        jumpWallGraphX = new DiscreteLinearGraph(jumpWallFrame);
+        jumpWallGraphY = new DiscreteLinearGraph(jumpWallFrame);
     }
 
     protected override void Update()
@@ -462,104 +562,67 @@ public class Player : Entity
         inputData.Copy(InputHandler.data);
 
         machine.UpdateInput();
-        // UnityEngine.Debug.Log(string.Format("current state: {0}", machine.state));
+
+        UnityEngine.Debug.Log(string.Format("current state: {0}", machine.state));
     }
 
     protected override void FixedUpdate()
     {
         base.FixedUpdate();
 
-        // Physics Check Before
-        UpdateFeetPosition();
-        UpdateHeadPosition();
-        UpdateBodyPosition();
-        UpdateSidePosition();
-        UpdateLookingDirection(inputData.xNegative, inputData.xPositive);
+        m_UpdatePositions();
 
-        spRenderer.flipX = (lookingDirection == 1);
-
-        // Terrain Checking
-        // CheckGroundAll(out detectedGround, out isHitGround, feetPos, 0.04f);
-
-        if(canCheckGround)
-        {
-            if(canCheckGroundBasic && canCheckGroundThroughable)
-            {
-                CheckGroundAll(out detectedGround, out isDetectedGround, feetPos, 0.5f);
-                isHitGround = isDetectedGround && detectedGround.distance <= 0.04f;
-            }
-            else if(canCheckGroundBasic && !canCheckGroundThroughable)
-            {
-                CheckGroundBasic(out detectedGround, out isDetectedGround, feetPos, 0.5f);
-                isHitGround = isDetectedGround && detectedGround.distance <= 0.04f;
-            }
-            else if(!canCheckGroundBasic && canCheckGroundThroughable)
-            {
-                CheckGroundThroughable(out detectedGround, out isDetectedGround, feetPos, 0.5f);
-                isHitGround = isDetectedGround && detectedGround.distance <= 0.04f;
-            }
-            else
-            {
-                detectedGround = default(RaycastHit2D);
-                isDetectedGround = false;
-                isHitGround = false;
-            }
-        }
-        else
-        {
-            detectedGround = default(RaycastHit2D);
-            isDetectedGround = false;
-            isHitGround = false;
-        }
-
-        if(canCheckCeil)
-        {
-            CheckCeil(out detectedCeil, out isHitCeil, headPos, 0.04f);
-        }
-        else
-        {
-            detectedCeil = default(RaycastHit2D);
-            isHitCeil = false;
-        }
-
-        CheckThroughableToUp(ref headThroughableGroundBefore, ref headThroughableGround);
-        CheckWall(out detectedFeetSideWall, out isHitFeetSideWall, feetSidePos, 0.04f, lookingDirection);
-        CheckWall(out detectedHeadSideWall, out isHitHeadSideWall, headSidePos, 0.04f, lookingDirection);
+        CheckGround();
+        CheckCeil();
+        CheckWall();
+        CheckHeadOverSemiGround();
         CheckLedge();
-
-        // Physics Check After
-        UpdateMoveDirection();
         CheckLedgeHanging();
 
-        // Machine Logic
+        UpdateLookDir();
+        UpdateMoveDirection();
+
         machine.UpdateLogic();
     }
+    #endregion
 
-    #region Implement State; stIdleOnGround
-    private void Enter_IdleOnGround()
+    #region Implement State; stIdleGround
+    private void Enter_IdleGround()
     {
         DisableGravity();
 
-        proceedIdleOnGroundFrame = 0;
+        proceedIdleGroundFrame = 0;
 
-        leftJumpOnGroundCount = jumpOnGroundCount;
-        leftJumpOnAirCount = jumpOnAirCount;
+        leftJumpGroundCount = jumpGroundCount;
+        leftJumpAirCount = jumpAirCount;
         leftDashCount = dashCount;
 
-        // 선입력 확인
-        uint mask_jumpOnGround      = 0b00000000000000000000000000000001;
-        uint mask_roll              = 0b00000000000000000000000000000010;
-        preInputPressing = 0b00000000000000000000000000000000;
-        preInputDown = 0b00000000000000000000000000000000;
+        // 아래 점프 가능한 발판과의 통과 여부 취소
+        if(currentSitGround)
+        {
+            bool exists = Array.Exists<RaycastHit2D>(headOverSemiGroundCurrents, (element) => element.collider == currentSitGround.collider);
+            bool canCollision = base.CanCollision(currentSitGround.collider);
 
-        for(int i = 0; i < preInputFrame_IdleOnGround; i++)
+            if(!exists && !canCollision)
+                base.AcceptCollision(currentSitGround.collider);
+
+            currentSitGround = default(RaycastHit2D);
+        }
+
+        // 선입력 확인
+        uint mask_jumpGround = 0b01;
+        uint mask_roll = 0b10;
+        preInputPressing = 0;
+        preInputDown = 0;
+
+        for(int i = 0; i < preInputFrameIdleGround; i++)
         {
             preInputData.Copy(InputHandler.data);
 
-            if((preInputPressing & mask_jumpOnGround) == 0 && preInputData.jumpPressing)
-                preInputPressing |= mask_jumpOnGround;
-            if((preInputDown & mask_jumpOnGround) == 0 && preInputData.jumpDown)
-                preInputDown |= mask_jumpOnGround;
+            if((preInputPressing & mask_jumpGround) == 0 && preInputData.jumpPressing)
+                preInputPressing |= mask_jumpGround;
+            if((preInputDown & mask_jumpGround) == 0 && preInputData.jumpDown)
+                preInputDown |= mask_jumpGround;
             if((preInputPressing & mask_roll) == 0 && preInputData.dashPressing)
                 preInputPressing |= mask_roll;
             if((preInputDown & mask_roll) == 0 && preInputData.dashDown)
@@ -568,144 +631,65 @@ public class Player : Entity
 
         if((preInputDown & mask_roll) != 0 && (preInputPressing & mask_roll) != 0)
             machine.ChangeState(stRoll);
-        else if((preInputDown & mask_jumpOnGround) != 0 && (preInputPressing & mask_jumpOnGround) != 0 && leftJumpOnGroundCount > 0)
-            machine.ChangeState(stJumpOnGround);
+        else if((preInputDown & mask_jumpGround) != 0 && (preInputPressing & mask_jumpGround) != 0 && leftJumpGroundCount > 0)
+            machine.ChangeState(stJumpGround);
     }
 
-    private void Input_IdleOnGround()
+    private void Input_IdleGround()
     {
         if(!isHitGround)
-        {
             machine.ChangeState(stFreeFall);
-        }
         else if(inputData.jumpDown)
-        {
-            machine.ChangeState(stJumpOnGround);
-        }
+            machine.ChangeState(stJumpGround);
         else if(inputData.dashDown)
-        {
             machine.ChangeState(stRoll);
-        }
         else if(inputData.yNegative != 0)
-        {
             machine.ChangeState(stSit);
-        }
         else if(inputData.yPositive != 0)
-        {
             machine.ChangeState(stHeadUp);
-        }
         else if(inputData.xInput != 0)
-        {
-            if(isRun)
-                machine.ChangeState(stRun);
-            else
-                machine.ChangeState(stWalk);
-        }
-        else if(proceedIdleOnGroundFrame >= longIdleTransitionFrame)
-        {
-            machine.ChangeState(stIdleLongOnGround);
-        }
+            machine.ChangeState(isRun ? stRun : stWalk);
+        else if(proceedIdleGroundFrame >= idleLongTransitionFrame)
+            machine.ChangeState(stIdleGroundLong);
     }
 
-    private void Logic_IdleOnGround()
+    private void Logic_IdleGround()
     {
-        proceedIdleOnGroundFrame++;
-
+        proceedIdleGroundFrame++;
         SetVelocityXY(0.0f, 0.0f);
     }
 
-    private void End_IdleOnGround()
+    private void End_IdleGround()
     {
-        proceedIdleOnGroundFrame = 0;
+        proceedIdleGroundFrame = 0;
     }
     #endregion
 
-    #region Implement State; stIdleLongOnGround
-    private void Enter_IdleLongOnGround()
+    #region Implement State; stIdleGroundLong
+    private void Enter_IdleGroundLong()
     {
         DisableGravity();
     }
 
-    private void Input_IdleLongOnGround()
+    private void Input_IdleGroundLong()
     {
         if(!isHitGround)
-        {
             machine.ChangeState(stFreeFall);
-        }
         else if(inputData.jumpDown)
-        {
-            machine.ChangeState(stJumpOnGround);
-        }
+            machine.ChangeState(stJumpGround);
         else if(inputData.dashDown)
-        {
             machine.ChangeState(stRoll);
-        }
         else if(inputData.yNegative != 0)
-        {
             machine.ChangeState(stSit);
-        }
         else if(inputData.yPositive != 0)
-        {
             machine.ChangeState(stHeadUp);
-        }
         else if(inputData.xInput != 0)
-        {
-            if(isRun)
-                machine.ChangeState(stRun);
-            else
-                machine.ChangeState(stWalk);
-        }
+            machine.ChangeState(isRun ? stRun : stWalk);
     }
 
-    private void Logic_IdleLongOnGround()
+    private void Logic_IdleGroundLong()
     {
         SetVelocityXY(0.0f, 0.0f);
-    }
-    #endregion
-
-    #region Implement State; stSit
-    private void Enter_Sit()
-    {
-        DisableGravity();
-
-        proceedSitFrame = 0;
-
-        CheckThroughableToDown(out sitThroughableGround);
-    }
-
-    private void Input_Sit()
-    {
-        if(!isHitGround)
-        {
-            machine.ChangeState(stFreeFall);
-        }
-        else if(inputData.jumpDown)
-        {
-            if(sitThroughableGround)
-                machine.ChangeState(stJumpDown);
-            else
-                machine.ChangeState(stJumpOnGround);
-        }
-        else if(inputData.dashDown)
-        {
-            machine.ChangeState(stRoll);
-        }
-        else if(inputData.yNegative == 0)
-        {
-            machine.ChangeState(stIdleOnGround);
-        }
-    }
-
-    private void Logic_Sit()
-    {
-        proceedSitFrame++;
-
-        SetVelocityXY(0.0f, 0.0f);
-    }
-
-    private void End_Sit()
-    {
-        proceedSitFrame = 0;
     }
     #endregion
 
@@ -713,40 +697,67 @@ public class Player : Entity
     private void Enter_HeadUp()
     {
         DisableGravity();
-
         proceedHeadUpFrame = 0;
     }
 
     private void Input_HeadUp()
     {
         if(!isHitGround)
-        {
             machine.ChangeState(stFreeFall);
-        }
         else if(inputData.jumpDown)
-        {
-            machine.ChangeState(stJumpOnGround);
-        }
+            machine.ChangeState(stJumpGround);
         else if(inputData.dashDown)
-        {
             machine.ChangeState(stRoll);
-        }
         else if(inputData.yPositive == 0)
-        {
-            machine.ChangeState(stIdleOnGround);
-        }
+            machine.ChangeState(stIdleGround);
     }
 
     private void Logic_HeadUp()
     {
         proceedHeadUpFrame++;
-
         SetVelocityXY(0.0f, 0.0f);
     }
 
     private void End_HeadUp()
     {
         proceedHeadUpFrame = 0;
+    }
+    #endregion
+
+    #region Implement State; stSit
+    private void Enter_Sit()
+    {
+        DisableGravity();
+        proceedSitFrame = 0;
+        currentSitGround = detectedGround;
+    }
+
+    private void Input_Sit()
+    {
+        if(!isHitGround)
+            machine.ChangeState(stFreeFall);
+        else if(inputData.jumpDown)
+        {
+            if(detectedGround.collider.gameObject.layer == LayerInfo.throughableGround)
+                machine.ChangeState(stJumpDown);
+            else
+                machine.ChangeState(stJumpGround);
+        }
+        else if(inputData.dashDown)
+            machine.ChangeState(stRoll);
+        else if(inputData.yNegative == 0)
+            machine.ChangeState(stIdleGround);
+    }
+
+    private void Logic_Sit()
+    {
+        proceedSitFrame++;
+        SetVelocityXY(0.0f, 0.0f);
+    }
+
+    private void End_Sit()
+    {
+        proceedSitFrame = 0;
     }
     #endregion
 
@@ -759,33 +770,19 @@ public class Player : Entity
     private void Input_Walk()
     {
         if(!isHitGround)
-        {
             machine.ChangeState(stFreeFall);
-        }
         else if(inputData.yNegative != 0)
-        {
             machine.ChangeState(stSit);
-        }
         else if(inputData.yPositive != 0)
-        {
             machine.ChangeState(stHeadUp);
-        }
         else if(isRun)
-        {
             machine.ChangeState(stRun);
-        }
         else if(inputData.jumpDown)
-        {
-            machine.ChangeState(stJumpOnGround);
-        }
+            machine.ChangeState(stJumpGround);
         else if(inputData.dashDown)
-        {
             machine.ChangeState(stRoll);
-        }
         else if(inputData.xInput == 0)
-        {
-            machine.ChangeState(stIdleOnGround);
-        }
+            machine.ChangeState(stIdleGround);
     }
 
     private void Logic_Walk()
@@ -797,7 +794,7 @@ public class Player : Entity
         else
             EnableGravity();
 
-        Logic_MoveOnGround(moveDirection, speed, lookingDirection);
+        Logic_MoveOnGround(moveDir, speed, lookDir);
     }
     #endregion
 
@@ -810,33 +807,19 @@ public class Player : Entity
     private void Input_Run()
     {
         if(!isHitGround)
-        {
             machine.ChangeState(stFreeFall);
-        }
         else if(inputData.yNegative != 0)
-        {
             machine.ChangeState(stSit);
-        }
         else if(inputData.yPositive != 0)
-        {
             machine.ChangeState(stHeadUp);
-        }
         else if(!isRun)
-        {
             machine.ChangeState(stWalk);
-        }
         else if(inputData.jumpDown)
-        {
-            machine.ChangeState(stJumpOnGround);
-        }
+            machine.ChangeState(stJumpGround);
         else if(inputData.dashDown)
-        {
             machine.ChangeState(stRoll);
-        }
         else if(inputData.xInput == 0)
-        {
-            machine.ChangeState(stIdleOnGround);
-        }
+            machine.ChangeState(stIdleGround);
     }
 
     private void Logic_Run()
@@ -848,7 +831,7 @@ public class Player : Entity
         else
             EnableGravity();
 
-        Logic_MoveOnGround(moveDirection, speed, lookingDirection);
+        Logic_MoveOnGround(moveDir, speed, lookDir);
     }
     #endregion
 
@@ -878,71 +861,61 @@ public class Player : Entity
         }
 
         // 선입력
-        uint mask_jumpOnAir = 0b00000000000000000000000000000001;
-        preInputPressing = 0b00000000000000000000000000000000;
-        preInputDown = 0b00000000000000000000000000000000;
+        uint mask_jumpAir = 0b01;
+        preInputPressing = 0b00;
+        preInputDown = 0b00;
 
-        for(int i = 0; i < preInputFrame_FreeFall; i++)
+        for(int i = 0; i < preInputFrameFreeFall; i++)
         {
             preInputData.Copy(InputHandler.data);
 
-            if((preInputPressing & mask_jumpOnAir) == 0 && preInputData.jumpPressing)
-                preInputPressing |= mask_jumpOnAir;
-            if((preInputDown & mask_jumpOnAir) == 0 && preInputData.jumpDown)
-                preInputDown |= mask_jumpOnAir;
+            if((preInputPressing & mask_jumpAir) == 0 && preInputData.jumpPressing)
+                preInputPressing |= mask_jumpAir;
+            if((preInputDown & mask_jumpAir) == 0 && preInputData.jumpDown)
+                preInputDown |= mask_jumpAir;
         }
 
-        if((preInputDown & mask_jumpOnAir) != 0 && (preInputPressing & mask_jumpOnAir) != 0 && leftJumpOnAirCount > 0)
-            machine.ChangeState(stJumpOnAir);
+        if((preInputDown & mask_jumpAir) != 0 && (preInputPressing & mask_jumpAir) != 0 && leftJumpAirCount > 0)
+            machine.ChangeState(stJumpAir);
     }
 
     private void Input_FreeFall()
     {
         if(isHitGround)
-        {
-            machine.ChangeState(stIdleOnGround);
-        }
+            machine.ChangeState(stIdleGround);
         else if(inputData.jumpDown)
         {
             if(inputData.yNegative != 0)
                 machine.ChangeState(stTakeDown);
-            else if(leftJumpOnAirCount > 0)
-                machine.ChangeState(stJumpOnAir);
+            else if(leftJumpAirCount > 0)
+                machine.ChangeState((stJumpAir));
         }
         else if(inputData.dashDown && leftDashCount > 0)
-        {
             machine.ChangeState(stDash);
-        }
         else if(inputData.yPositive != 0)
-        {
             machine.ChangeState(stGliding);
-        }
-        else if(inputData.xInput == lookingDirection)
+        else if(inputData.xInput == lookDir)
         {
-            if(isHitLedge)
-                machine.ChangeState(stLedgeClimb);
-            else if(!isDetectedGround && inputData.yNegative == 0 && isHitFeetSideWall == lookingDirection && isHitHeadSideWall == lookingDirection)
-                machine.ChangeState(stIdleOnWall);
+            if(isHitLedgeHead)
+                machine.ChangeState(stLedgeClimbHead);
+            else if(isHitLedgeBody)
+                machine.ChangeState(stLedgeClimbBody);
+            else if(!isDetectedGround && inputData.yNegative == 0 && isHitWallB == lookDir && isHitWallT == lookDir)
+                machine.ChangeState(stIdleWall);
         }
     }
 
     private void Logic_FreeFall()
     {
-        // TODO: velocity.y가 0이 되는 순간 프레임을 초기화 하는 방법은 어떤가?
-
-        if(isHangingOnGround)
-        {
+        if(isHangingGround)
             proceedFreeFallFrame = 0;
-        }
         else
         {
             if(proceedFreeFallFrame < freeFallFrame)
                 proceedFreeFallFrame++;
 
-            float vx = GetMoveSpeed() * inputData.xInput;
-            vx = CheckVelocityX(vx);
-            float vy = -maxFreeFallSpeed * freeFallGraph[proceedFreeFallFrame - 1];
-
+            vx = CheckVelocityX(GetMoveSpeed() * inputData.xInput);
+            vy = -maxFreeFallSpeed * freeFallGraph[proceedFreeFallFrame - 1];
             SetVelocityXY(vx, vy);
         }
     }
@@ -973,13 +946,23 @@ public class Player : Entity
         }
         else
         {
-            if(inputData.xInput == 0)
+            float tx = Mathf.Abs(currentVelocity.x);
+
+            if(tx > glidingSpeed)
+            {
+                leftGlidingDeaccelFrameX = glidingDeaccelFrameX;
+                proceedGlidingAccelFrameX = glidingAccelFrameX;
+            }
+            else if(inputData.xInput == 0)
             {
                 for(int i = 0; i < glidingDeaccelFrameX; i++)
                 {
-                    if(Mathf.Abs(currentVelocity.x) >= glidingDeaccelGraphX[i])
+                    if(Mathf.Abs(currentVelocity.x) >= glidingDeaccelGraphX[i] * glidingSpeed)
                     {
                         leftGlidingDeaccelFrameX = i;
+                        proceedGlidingAccelFrameX = glidingAccelFrameX;
+                        while(proceedGlidingAccelFrameX > 0 &&  glidingAccelGraphX[proceedGlidingAccelFrameX - 1] > glidingDeaccelGraphX[leftGlidingDeaccelFrameX])
+                            proceedGlidingAccelFrameX--;
                         break;
                     }
                 }
@@ -988,9 +971,12 @@ public class Player : Entity
             {
                 for(int i = 0; i < glidingAccelFrameX; i++)
                 {
-                    if(Mathf.Abs(currentVelocity.x) >= glidingAccelGraphX[i])
+                    if(Mathf.Abs(currentVelocity.x) >= glidingAccelGraphX[i] * glidingSpeed)
                     {
                         proceedGlidingAccelFrameX = i;
+                        leftGlidingDeaccelFrameX = 0;
+                        while(leftGlidingDeaccelFrameX < glidingDeaccelFrameX && glidingDeaccelGraphX[leftGlidingDeaccelFrameX] < glidingAccelGraphX[proceedGlidingAccelFrameX])
+                            leftGlidingDeaccelFrameX++;
                         break;
                     }
                 }
@@ -1001,109 +987,106 @@ public class Player : Entity
     private void Input_Gliding()
     {
         if(isHitGround)
-        {
-            machine.ChangeState(stIdleOnGround);
-        }
-        else if(inputData.jumpDown && leftJumpOnAirCount > 0)
-        {
-            machine.ChangeState(stJumpOnAir);
-        }
+            machine.ChangeState(stIdleGround);
+        else if(inputData.jumpDown && leftJumpAirCount > 0)
+            machine.ChangeState(stJumpAir);
         else if(inputData.dashDown && leftDashCount > 0)
-        {
             machine.ChangeState(stDash);
-        }
         else if(inputData.yPositive == 0)
-        {
             machine.ChangeState(stFreeFall);
-        }
-        else if(inputData.xInput == lookingDirection)
+        else if(inputData.xInput == lookDir)
         {
-            if(isHitLedge)
-                machine.ChangeState(stLedgeClimb);
-            else if(!isDetectedGround && inputData.yNegative == 0 && isHitFeetSideWall == lookingDirection && isHitHeadSideWall == lookingDirection)
-                machine.ChangeState(stIdleOnWall);
+            if(isHitLedgeHead)
+                machine.ChangeState(stLedgeClimbHead);
+            else if(isHitLedgeBody)
+                machine.ChangeState(stLedgeClimbBody);
+            else if(!isDetectedGround && inputData.yNegative == 0 && isHitWallB == lookDir && isHitWallT == lookDir)
+                machine.ChangeState(stIdleWall);
         }
     }
 
     private void Logic_Gliding()
     {
-        float vx = 0.0f;
-        float vy = -glidingSpeed;
+        vy = -glidingSpeed;
 
-        if(currentVelocity.x * inputData.xInput < 0.0f)
+        if(currentVelocity.x * inputData.xInput < 0.0f) // 방향전환 확인
         {
-            vx = 0.0f;
-            proceedGlidingAccelFrameX = 0;
-            leftGlidingDeaccelFrameX = 0;
+            vx *= -1.0f;
         }
         else if(inputData.xInput == 0)
         {
             if(leftGlidingDeaccelFrameX > 0)
                 leftGlidingDeaccelFrameX--;
 
-            proceedGlidingAccelFrameX = 0;
+            while(proceedGlidingAccelFrameX > 0 &&  glidingAccelGraphX[proceedGlidingAccelFrameX - 1] > glidingDeaccelGraphX[leftGlidingDeaccelFrameX])
+                proceedGlidingAccelFrameX--;
 
-            vx = GetMoveSpeed() * glidingDeaccelGraphX[leftGlidingDeaccelFrameX] * lookingDirection;
-            vx = CheckVelocityX(vx);
+            vx = CheckVelocityX(GetMoveSpeed() * glidingDeaccelGraphX[leftGlidingDeaccelFrameX] * lookDir);
         }
         else if(inputData.xInput != 0)
         {
             if(proceedGlidingAccelFrameX < glidingAccelFrameX)
                 proceedGlidingAccelFrameX++;
 
-            leftGlidingDeaccelFrameX = glidingDeaccelFrameX;
+            while(leftGlidingDeaccelFrameX < glidingDeaccelFrameX && glidingDeaccelGraphX[leftGlidingDeaccelFrameX] < glidingAccelGraphX[proceedGlidingAccelFrameX - 1])
+                leftGlidingDeaccelFrameX++;
 
-            vx = GetMoveSpeed() * glidingAccelGraphX[proceedGlidingAccelFrameX - 1] * lookingDirection;
-            vx = CheckVelocityX(vx);
+            vx = CheckVelocityX(GetMoveSpeed() * glidingAccelGraphX[proceedGlidingAccelFrameX - 1] * lookDir);
         }
 
         SetVelocityXY(vx, vy);
     }
     #endregion
 
-    #region Implement State; stIdleOnWall
-    private void Enter_IdleOnWall()
+    #region Implement State; stIdleWall
+    private void Enter_IdleWall()
     {
         DisableGravity();
-        leftJumpOnAirCount = jumpOnAirCount;
+        leftJumpAirCount = jumpAirCount;
         leftDashCount = dashCount;
 
+        // 아래 점프 가능한 발판과의 통과 여부 취소
+        if(currentSitGround)
+        {
+            bool exists = Array.Exists<RaycastHit2D>(headOverSemiGroundCurrents, (element) => element.collider == currentSitGround.collider);
+            bool canCollision = base.CanCollision(currentSitGround.collider);
+
+            if(!exists && !canCollision)
+                base.AcceptCollision(currentSitGround.collider);
+
+            currentSitGround = default(RaycastHit2D);
+        }
+
         // 선입력
-        uint mask_jumpOnWall = 0b00000000000000000000000000000001;
-        preInputPressing = 0b00000000000000000000000000000000;
-        preInputDown = 0b00000000000000000000000000000000;
+        uint mask_jumpWall = 0b01;
+        preInputPressing = 0b00;
+        preInputDown = 0b00;
 
-        for(int i = 0; i < preInputFrame_FreeFall; i++)
+        for(int i = 0; i < preInputFrameIdleWall; i++)
         {
-            preInputData.Copy(InputHandler.data);
+            preInputData.Copy(InputBuffer.GetBufferedData(i));
 
-            if((preInputPressing & mask_jumpOnWall) == 0 && preInputData.jumpPressing)
-                preInputPressing |= mask_jumpOnWall;
-            if((preInputDown & mask_jumpOnWall) == 0 && preInputData.jumpDown)
-                preInputDown |= mask_jumpOnWall;
+            if((preInputPressing & mask_jumpWall) == 0 && preInputData.jumpPressing)
+                preInputPressing |= mask_jumpWall;
+            if((preInputDown & mask_jumpWall) == 0 && preInputData.jumpDown)
+                preInputDown |= mask_jumpWall;
         }
 
-        if((preInputDown & mask_jumpOnWall) != 0 && (preInputPressing & mask_jumpOnWall) != 0)
-            machine.ChangeState(stJumpOnWall);
+        if((preInputDown & mask_jumpWall) != 0 && (preInputPressing & mask_jumpWall) != 0)
+            machine.ChangeState(stJumpWall);
     }
 
-    private void Input_IdleOnWall()
+    private void Input_IdleWall()
     {
-        if(isDetectedGround || isHitFeetSideWall == 0 || isHitHeadSideWall == 0 || inputData.xNegDown)
-        {
+        if(isDetectedGround || isHitWallB == 0 || isHitWallT == 0 || inputData.yNegDown)
             machine.ChangeState(stFreeFall);
-        }
         else if(inputData.xInput == 0)
-        {
             machine.ChangeState(stWallSliding);
-        }
         else if(inputData.jumpDown)
-        {
-            machine.ChangeState(stJumpOnWall);
-        }
+            machine.ChangeState(stJumpWall);
     }
 
-    private void Logic_IdleOnWall()
+    private void Logic_IdleWall()
     {
         SetVelocityXY(0.0f, 0.0f);
     }
@@ -1113,28 +1096,19 @@ public class Player : Entity
     private void Enter_WallSliding()
     {
         EnableGravity();
-
         proceedWallSlidingFrame = 0;
     }
 
     private void Input_WallSliding()
     {
         if(isHitGround)
-        {
-            machine.ChangeState(stIdleOnGround);
-        }
-        else if(isDetectedGround || isHitFeetSideWall == 0 || isHitHeadSideWall == 0 || inputData.yNegDown)
-        {
+            machine.ChangeState(stIdleGround);
+        else if(isDetectedGround || isHitWallB == 0 || isHitWallT == 0 || inputData.yNegDown)
             machine.ChangeState(stFreeFall);
-        }
-        else if(inputData.xInput == lookingDirection && isHitFeetSideWall == lookingDirection && isHitHeadSideWall == lookingDirection && inputData.yNegative == 0)
-        {
-            machine.ChangeState(stIdleOnWall);
-        }
+        else if(inputData.xInput == lookDir && inputData.yNegative == 0 && !isDetectedGround && isHitWallB == lookDir && isHitWallT == lookDir)
+            machine.ChangeState(stIdleWall);
         else if(inputData.jumpDown)
-        {
-            machine.ChangeState(stJumpOnWall);
-        }
+            machine.ChangeState(stJumpWall);
     }
 
     private void Logic_WallSliding()
@@ -1142,86 +1116,143 @@ public class Player : Entity
         if(proceedWallSlidingFrame < wallSlidingFrame)
             proceedWallSlidingFrame++;
 
-        float vx = 0.0f;
-        float vy = -maxWallSlidingSpeed * wallSlidingGraph[proceedWallSlidingFrame - 1];
-
+        vx = 0.0f;
+        vy = -maxWallSlidingSpeed * wallSlidingGraph[proceedWallSlidingFrame - 1];
         SetVelocityXY(vx, vy);
     }
     #endregion
 
-    #region Implement State; stLedgeClimb
-    private void Enter_LedgeClimb()
+    #region Implement State; stLedgeClimbHead
+    private void Enter_LedgeClimbHead()
     {
         DisableGravity();
 
-        canUpdateLookingDirection = false;
+        Vector2 sidePos = Vector2.zero;
+        Vector2 handDir = Vector2.zero;
+        Vector2 feetDir = Vector2.zero;
+
+        if(lookDir == 1)
+            sidePos = rtPos;
+        else if(lookDir == -1)
+            sidePos = ltPos;
+
+        handDir.Set(transform.position.x - sidePos.x, transform.position.y - sidePos.y);
+        feetDir.Set(transform.position.x - fPos.x, transform.position.y - fPos.y);
+
+        ledgeHoldPos.Set(ledgeCornerSidePos.x + handDir.x, ledgeCornerSidePos.y + handDir.y);
+        ledgeEndPos.Set(ledgeCornerTopPos.x + feetDir.x, ledgeCornerTopPos.y + feetDir.y);
+
+        canUpdateLookDir = false;
         canCheckLedge = false;
-        isEndOfLedgeAnimation = false;
+        isLedgeAnimationEnded = false;
 
-        DisableGravity();
+        // TODO: Animation Clip을 넣고 OnLedgeAnimationEnded 함수를 Animation Event로 등록 후 이 코드는 삭제.
+        Action holdLedge = () =>
+        {
+            Thread.Sleep(2000);
+            isLedgeAnimationEnded = true;
+        };
 
-        Vector2 holdDir = transform.position - (Vector3)headSidePos;
-        Vector2 teleportDir = transform.position - (Vector3)feetPos;
+        Thread holdThread = new Thread(new ThreadStart(holdLedge));
+        holdThread.Start();
 
-        transform.position = ledgeCornerSidePos + holdDir;
-        ledgeTeleportPos = ledgeCornerTopPos + teleportDir;
+        transform.position = ledgeHoldPos;
     }
 
-    private void Input_LedgeClimb()
+    private void Input_LedgeClimbHead()
     {
-        // NOTE:
-        // stIdleOnGround로 전이 시, stIdleOnGround -> stFreeFall -> stLedgeClimb를 한 프레임 안에 돌아서 오기 때문에
-        // 플레이어가 난간 끝으로 텔레포트 하지 않는 현상이 발생한다.
-        // => Enter Time에 transform.position = ledgeCornerSidePos + holdDir 호출 전, holdDir과 teleportDir을 설정해준다.
-        // transform.position은 값 대입 즉시 갱신되지만, bodyPos, feetPos가 물리 프레임이 호출되기 전에 갱신이 되지 않으므로, 이에 따른 차이에 의해
-        // 공중에 뜨는 현상이 발생한 것이다.
-        if(isEndOfLedgeAnimation)
-        {
-            machine.ChangeState(stIdleOnGround);
-        }
-
-        // NOTE: 애니메이션 상태 머신 구현 전 임시 테스트 코드
-        // TODO: 애니메이션 상태 머신 구현 후 이 코드를 지워야 한다.
-        else if(Input.GetKeyDown(KeyCode.Return))
-        {
-            machine.ChangeState(stIdleOnGround);
-        }
-
-        // NOTE: 자유 낙하를 구현해야 하는 이유를 모르겠다.
+        if(isLedgeAnimationEnded)
+            machine.ChangeState(stIdleGround);
     }
 
-    private void Logic_LedgeClimb()
+    private void Logic_LedgeClimbHead()
     {
         SetVelocityXY(0.0f, 0.0f);
     }
 
-    private void End_LedgeClimb()
+    private void End_LedgeClimbHead()
     {
-        transform.position = ledgeTeleportPos;
-
-        canUpdateLookingDirection = true;
+        transform.position = ledgeEndPos;
+        canUpdateLookDir = true;
         canCheckLedge = true;
     }
     #endregion
 
-    #region Implement State; stJumpOnGround
-    private void Enter_JumpOnGround()
+    #region Implement State; stLedgeClimbBody
+    private void Enter_LedgeClimbBody()
+    {
+        DisableGravity();
+
+        Vector2 sidePos = Vector2.zero;
+        Vector2 handDir = Vector2.zero;
+        Vector2 feetDir = Vector2.zero;
+
+        if(lookDir == 1)
+            sidePos = crPos;
+        else if(lookDir == -1)
+            sidePos = clPos;
+
+        handDir.Set(transform.position.x - sidePos.x, transform.position.y - sidePos.y);
+        feetDir.Set(transform.position.x - fPos.x, transform.position.y - fPos.y);
+
+        ledgeHoldPos.Set(ledgeCornerSidePos.x + handDir.x, ledgeCornerSidePos.y + handDir.y);
+        ledgeEndPos.Set(ledgeCornerTopPos.x + feetDir.x, ledgeCornerTopPos.y + feetDir.y);
+
+        canUpdateLookDir = false;
+        canCheckLedge = false;
+        isLedgeAnimationEnded = false;
+
+        // TODO: Animation Clip을 넣고 OnLedgeAnimationEnded 함수를 Animation Event로 등록 후 이 코드는 삭제.
+        Action holdLedge = () =>
+        {
+            Thread.Sleep(2000);
+            isLedgeAnimationEnded = true;
+        };
+
+        Thread holdThread = new Thread(new ThreadStart(holdLedge));
+        holdThread.Start();
+
+        transform.position = ledgeHoldPos;
+    }
+
+    private void Input_LedgeClimbBody()
+    {
+        if(isLedgeAnimationEnded)
+            machine.ChangeState(stIdleGround);
+    }
+
+    private void Logic_LedgeClimbBody()
+    {
+        SetVelocityXY(0.0f, 0.0f);
+    }
+
+    private void End_LedgeClimbBody()
+    {
+        transform.position = ledgeEndPos;
+        canUpdateLookDir = true;
+        canCheckLedge = true;
+    }
+    #endregion
+
+    #region Implement State; stJumpGround
+    private void Enter_JumpGround()
     {
         EnableGravity();
 
-        leftJumpOnGroundCount--;
-        leftJumpOnGroundFrame = jumpOnGroundFrame;
-        isCancelOfJumpOnGround = false;
+        leftJumpGroundCount--;
+        leftJumpGroundFrame = jumpGroundFrame;
+        isJumpGroundCanceled = false;
     }
 
-    private void Input_JumpOnGround()
+    private void Input_JumpGround()
     {
-        if(inputData.jumpUp && !isCancelOfJumpOnGround)
+        if(inputData.jumpUp && !isJumpGroundCanceled)
         {
-            leftJumpOnGroundFrame /= 2;
+            leftJumpGroundFrame /= 2;
+            isJumpGroundCanceled = true;
         }
 
-        if(isHitCeil || leftJumpOnGroundFrame == 0)
+        if(isHitCeil || leftJumpGroundFrame == 0)
         {
             if(inputData.yPositive == 0)
                 machine.ChangeState(stFreeFall);
@@ -1232,31 +1263,29 @@ public class Player : Entity
         {
             if(inputData.yNegative != 0)
                 machine.ChangeState(stTakeDown);
-            else if(leftJumpOnAirCount > 0)
-                machine.ChangeState(stJumpOnAir);
+            else if(leftJumpAirCount > 0)
+                machine.ChangeState(stJumpAir);
         }
         else if(inputData.dashDown && leftDashCount > 0)
-        {
             machine.ChangeState(stDash);
-        }
-        else if(inputData.xInput == lookingDirection)
+        else if(inputData.xInput == lookDir)
         {
-            if(isHitLedge)
-                machine.ChangeState(stLedgeClimb);
-            else if(!isDetectedGround && inputData.yNegative == 0 && isHitFeetSideWall == lookingDirection && isHitHeadSideWall == lookingDirection)
-                machine.ChangeState(stIdleOnWall);
+            if(isHitLedgeHead)
+                machine.ChangeState(stLedgeClimbHead);
+            else if(isHitLedgeBody)
+                machine.ChangeState(stLedgeClimbBody);
+            else if(!isDetectedGround && inputData.yNegative == 0 && isHitWallB == lookDir && isHitWallT == lookDir)
+                machine.ChangeState(stIdleWall);
         }
     }
 
-    private void Logic_JumpOnGround()
+    private void Logic_JumpGround()
     {
-        if(leftJumpOnGroundFrame > 0)
-            leftJumpOnGroundFrame--;
+        if(leftJumpGroundFrame > 0)
+            leftJumpGroundFrame--;
 
-        float vx = inputData.xInput * GetMoveSpeed();
-        float vy = jumpOnGroundSpeed * jumpOnGroundGraph[leftJumpOnGroundFrame];
-
-        vx = CheckVelocityX(vx);
+        vx = CheckVelocityX(inputData.xInput * GetMoveSpeed());
+        vy = jumpGroundSpeed * jumpGroundGraph[leftJumpGroundFrame];
 
         SetVelocityXY(vx, vy);
     }
@@ -1267,52 +1296,43 @@ public class Player : Entity
     {
         EnableGravity();
 
-        canCheckGroundThroughable = false;
-        canCheckLedge = false;
-        currentJumpDownGround = sitThroughableGround.collider;
-        sitThroughableGround = default(RaycastHit2D);
-
         leftJumpDownFrame = jumpDownFrame;
-        IgnoreCollision(currentJumpDownGround);
+
+        IgnoreCollision(currentSitGround.collider);
     }
 
     private void Input_JumpDown()
     {
-        if(headThroughableGround && headThroughableGround.collider == currentJumpDownGround && headThroughableGround.distance >= 0.1f)
-        {
+        // if(leftJumpDownFrame == 0 || isHitCeil) machine.ChangeState(stFreeFall);
+
+        if(isHitCeil)
             machine.ChangeState(stFreeFall);
-        }
+        else if(Array.Exists<RaycastHit2D>(headOverSemiGroundCurrents, (element) => element.collider == currentSitGround.collider && element.distance >= 0.1f))
+            machine.ChangeState(stFreeFall);
     }
 
     private void Logic_JumpDown()
     {
         if(leftJumpDownFrame > 0)
         {
-            proceedFreeFallFrame = 0;
             leftJumpDownFrame--;
-
-            float vx = 0.0f;
-            float vy = jumpDownSpeed * jumpDownGraph[leftJumpDownFrame];
-
+            // vx = GetMoveSpeed() * inputData.xInput;
+            vx = 0.0f;
+            vy = jumpDownSpeed * jumpDownGraph[leftJumpDownFrame];
             SetVelocityXY(vx, vy);
+
+            if(leftJumpDownFrame == 0)
+                proceedFreeFallFrame = 0;
         }
         else
         {
             if(proceedFreeFallFrame < freeFallFrame)
                 proceedFreeFallFrame++;
 
-            float vx = 0.0f;
-            float vy = -maxFreeFallSpeed * freeFallGraph[proceedFreeFallFrame - 1];
-
+            vx = 0.0f;
+            vy = -maxFreeFallSpeed * freeFallGraph[proceedFreeFallFrame - 1];
             SetVelocityXY(vx, vy);
         }
-    }
-
-    private void End_JumpDown()
-    {
-        canCheckGroundThroughable = true;
-        canCheckLedge = true;
-        currentJumpDownGround = null;
     }
     #endregion
 
@@ -1320,42 +1340,34 @@ public class Player : Entity
     private void Enter_Roll()
     {
         EnableGravity();
-
         leftRollStartFrame = rollStartFrame;
         leftRollInvincibilityFrame = 0;
         leftRollWakeUpFrame = 0;
         leftRollFrame = rollStartFrame + rollInvincibilityFrame + rollWakeUpFrame;
-        rollLookingDirection = lookingDirection;
+        rollLookDir = lookDir;
     }
 
     private void Input_Roll()
     {
         if(!isDetectedGround)
-        {
             machine.ChangeState(stFreeFall);
-        }
-        else if(inputData.jumpDown && leftJumpOnGroundCount > 0 && leftRollFrame < rollInvincibilityFrame + rollWakeUpFrame)
-        {
-            machine.ChangeState(stJumpOnGround);
-        }
+        else if(inputData.jumpDown && leftJumpGroundCount > 0 && leftRollFrame < rollInvincibilityFrame + rollWakeUpFrame)
+            machine.ChangeState(stJumpGround);
         else if(inputData.xInput != 0 && leftRollFrame < rollWakeUpFrame)
-        {
-            if(isRun)
-                machine.ChangeState(stRun);
-            else
-                machine.ChangeState(stWalk);
-        }
+            machine.ChangeState(isRun ? stRun : stWalk);
         else if(leftRollFrame == 0)
         {
             if(inputData.yNegative != 0)
                 machine.ChangeState(stSit);
             else
-                machine.ChangeState(stIdleOnGround);
+                machine.ChangeState(stIdleGround);
         }
     }
 
     private void Logic_Roll()
     {
+        // 프레임 갱신 및 구르기 내부 상태 전환
+        // 구르기 초반->중반(무적)->후반(일어나기)
         if(leftRollStartFrame > 0)
         {
             leftRollStartFrame--;
@@ -1375,6 +1387,7 @@ public class Player : Entity
             leftRollWakeUpFrame--;
         }
 
+        // 전체 프레임 갱신
         if(leftRollFrame > 0)
             leftRollFrame--;
 
@@ -1385,30 +1398,29 @@ public class Player : Entity
         else
             EnableGravity();
 
-        Logic_MoveOnGround(moveDirection, speed * rollGraph[leftRollFrame], rollLookingDirection);
+        Logic_MoveOnGround(moveDir, speed * rollGraph[leftRollFrame], rollLookDir);
     }
     #endregion
 
-    #region Implement State; stJumpOnAir
-    private void Enter_JumpOnAir()
+    #region Implement State; stJumpAir
+    private void Enter_JumpAir()
     {
         DisableGravity();
-
-        leftJumpOnAirCount--;
-
-        leftJumpOnAirIdleFrame = jumpOnAirIdleFrame;
-        leftJumpOnAirFrame = 0;
-        isCancelOfJumpOnAir = false;
+        leftJumpAirCount--;
+        leftJumpAirIdleFrame = jumpAirIdleFrame;
+        leftJumpAirFrame = 0;
+        isJumpAirCanceled = false;
     }
 
-    private void Input_JumpOnAir()
+    private void Input_JumpAir()
     {
-        if(inputData.jumpUp && !isCancelOfJumpOnAir)
+        if(inputData.jumpUp && !isJumpAirCanceled)
         {
-            leftJumpOnAirFrame /= 2;
+            leftJumpAirFrame /= 2;
+            isJumpAirCanceled = true;
         }
 
-        if((leftJumpOnAirIdleFrame == 0 && leftJumpOnAirFrame == 0) || isHitCeil)
+        if((leftJumpAirIdleFrame == 0 && leftJumpAirFrame == 0) || isHitCeil)
         {
             if(inputData.yPositive == 0)
                 machine.ChangeState(stFreeFall);
@@ -1417,47 +1429,42 @@ public class Player : Entity
         }
         else if(inputData.jumpDown)
         {
-            if(leftJumpOnAirCount > 0)
+            if(leftJumpAirCount > 0)
                 machine.RestartState();
             else if(inputData.yNegative != 0)
                 machine.ChangeState(stTakeDown);
         }
         else if(inputData.dashDown && leftDashCount > 0)
-        {
             machine.ChangeState(stDash);
-        }
-        else if(inputData.xInput == lookingDirection)
+        else if(inputData.xInput == lookDir)
         {
-            if(isHitLedge)
-                machine.ChangeState(stLedgeClimb);
-            else if(!isDetectedGround && inputData.yNegative == 0 && isHitFeetSideWall == lookingDirection && isHitHeadSideWall == lookingDirection)
-                machine.ChangeState(stIdleOnWall);
+            if(isHitLedgeHead)
+                machine.ChangeState(stLedgeClimbHead);
+            else if(isHitLedgeBody)
+                machine.ChangeState(stLedgeClimbBody);
+            else if(!isDetectedGround && inputData.yNegative == 0 && isHitWallB == lookDir && isHitWallT == lookDir)
+                machine.ChangeState(stIdleWall);
         }
     }
 
-    private void Logic_JumpOnAir()
+    private void Logic_JumpAir()
     {
-        if(leftJumpOnAirIdleFrame > 0)
+        if(leftJumpAirIdleFrame > 0)
         {
-            leftJumpOnAirIdleFrame--;
+            leftJumpAirIdleFrame--;
 
             DisableGravity();
             SetVelocityXY(0.0f, 0.0f);
 
-            if(leftJumpOnAirIdleFrame == 0)
-                leftJumpOnAirFrame = jumpOnAirFrame;
+            if(leftJumpAirIdleFrame == 0)
+                leftJumpAirFrame = jumpAirFrame;
         }
-        else if(leftJumpOnAirFrame > 0)
+        else if(leftJumpAirFrame > 0)
         {
             EnableGravity();
-
-            leftJumpOnAirFrame--;
-
-            float vx = inputData.xInput * GetMoveSpeed();
-            float vy = jumpOnAirSpeed * jumpOnAirGraph[leftJumpOnAirFrame];
-
-            vx = CheckVelocityX(vx);
-
+            leftJumpAirFrame--;
+            vx = CheckVelocityX(inputData.xInput * GetMoveSpeed());
+            vy = jumpAirSpeed * jumpAirGraph[leftJumpAirFrame];
             SetVelocityXY(vx, vy);
         }
     }
@@ -1467,25 +1474,24 @@ public class Player : Entity
     private void Enter_Dash()
     {
         DisableGravity();
-
         leftDashCount--;
         leftDashIdleFrame = dashIdleFrame;
         leftDashInvincibilityFrame = 0;
-        dashLookingDirection = lookingDirection;
+        dashLookDir = lookDir;
     }
 
     private void Input_Dash()
     {
         if(leftDashIdleFrame == 0 && leftDashInvincibilityFrame == 0)
-        {
             machine.ChangeState(stFreeFall);
-        }
-        else if(inputData.xInput == lookingDirection)
+        else if(inputData.xInput == lookDir)
         {
-            if(isHitLedge)
-                machine.ChangeState(stLedgeClimb);
-            else if(!isDetectedGround && inputData.yNegative == 0 && isHitFeetSideWall == lookingDirection && isHitHeadSideWall == lookingDirection)
-                machine.ChangeState(stIdleOnWall);
+            if(isHitLedgeHead)
+                machine.ChangeState(stLedgeClimbHead);
+            else if(isHitLedgeBody)
+                machine.ChangeState(stLedgeClimbBody);
+            else if(!isDetectedGround && inputData.yNegative == 0 && isHitWallB == lookDir && isHitWallT == lookDir)
+                machine.ChangeState(stIdleWall);
         }
     }
 
@@ -1493,10 +1499,9 @@ public class Player : Entity
     {
         if(leftDashIdleFrame > 0)
         {
-            leftDashIdleFrame--;
-
             DisableGravity();
 
+            leftDashIdleFrame--;
             SetVelocityXY(0.0f, 0.0f);
 
             if(leftDashIdleFrame == 0)
@@ -1504,15 +1509,11 @@ public class Player : Entity
         }
         else if(leftDashInvincibilityFrame > 0)
         {
-            leftDashInvincibilityFrame--;
-
             EnableGravity();
 
-            float vx = dashSpeed * dashGraph[leftDashInvincibilityFrame] * dashLookingDirection;
-            float vy = 0.0f;
-
-            vx = CheckVelocityX(vx);
-
+            leftDashInvincibilityFrame--;
+            vx = CheckVelocityX(dashSpeed * dashGraph[leftDashInvincibilityFrame] * dashLookDir);
+            vy = 0.0f;
             SetVelocityXY(vx, vy);
         }
     }
@@ -1523,18 +1524,20 @@ public class Player : Entity
     {
         leftTakeDownAirIdleFrame = takeDownAirIdleFrame;
         leftTakeDownLandingIdleFrame = 0;
+        isTakeDownAirIdleEnded = false;
         isLandingAfterTakeDown = false;
+
+        rigid.constraints |= RigidbodyConstraints2D.FreezePositionX;
     }
 
     private void Input_TakeDown()
     {
-        if(leftTakeDownAirIdleFrame == 0 && leftTakeDownLandingIdleFrame == 0)
+        if(isTakeDownAirIdleEnded && isLandingAfterTakeDown && leftTakeDownAirIdleFrame == 0 && leftTakeDownLandingIdleFrame == 0)
         {
-            machine.ChangeState(stIdleOnGround);
-        }
-        else if(isLandingAfterTakeDown && !isHitGround)
-        {
-            machine.ChangeState(stFreeFall);
+            if(isHitGround)
+                machine.ChangeState(stIdleGround);
+            else
+                machine.ChangeState(stFreeFall);
         }
     }
 
@@ -1542,102 +1545,110 @@ public class Player : Entity
     {
         if(leftTakeDownAirIdleFrame > 0)
         {
+            DisableGravity();
             leftTakeDownAirIdleFrame--;
 
-            DisableGravity();
             SetVelocityXY(0.0f, 0.0f);
 
             if(leftTakeDownAirIdleFrame == 0)
-                leftTakeDownLandingIdleFrame = takeDownLandingIdleFrame;
+                isTakeDownAirIdleEnded = true;
         }
-        else if(!isHitGround)
+        else if(isTakeDownAirIdleEnded && !isLandingAfterTakeDown)
         {
             EnableGravity();
             SetVelocityXY(0.0f, -takeDownSpeed);
+
+            if(isHitGround)
+            {
+                leftTakeDownLandingIdleFrame = takeDownLandingIdleFrame;
+                isLandingAfterTakeDown = true;
+            }
         }
         else if(leftTakeDownLandingIdleFrame > 0)
         {
             DisableGravity();
-
-            // TODO: 부서지는 바닥 탐지를 이 곳에서 수행하고, 바닥을 부순다.
-
             leftTakeDownLandingIdleFrame--;
-            isLandingAfterTakeDown = true;
 
             SetVelocityXY(0.0f, 0.0f);
+
+            // TODO: 부서지는 바닥 탐지를 이 곳에서 수행하고, 바닥을 부순다.
         }
+    }
+
+    private void End_TakeDown()
+    {
+        rigid.constraints &= ~RigidbodyConstraints2D.FreezePositionX;
     }
     #endregion
 
-    #region Implement State; stJumpOnWall
-    private void Enter_JumpOnWall()
+    #region Implement State; stJumpWall
+    private void Enter_JumpWall()
     {
         EnableGravity();
-
-        leftJumpOnWallForceFrame = jumpOnWallForceFrame;
-        leftJumpOnWallFrame = jumpOnWallFrame;
-        jumpOnWallLookingDirection = -lookingDirection;
-        isCancelOfJumpOnWallX = false;
-        isCancelOfJumpOnWallXY = false;
+        leftJumpWallForceFrame = jumpWallForceFrame;
+        leftJumpWallFrame = jumpWallFrame;
+        jumpWallLookDir = -lookDir;
+        isJumpWallCanceledX = false;
+        isJumpWallCanceledXY = false;
     }
 
-    private void Input_JumpOnWall()
+    private void Input_JumpWall()
     {
-        if(leftJumpOnWallForceFrame == 0)
+        if(leftJumpWallForceFrame == 0)
         {
             // 상태 기계의 상태변경을 위한 제어 함수
             if(inputData.jumpDown)
             {
                 if(inputData.yNegative != 0 && !isDetectedGround)
                     machine.ChangeState(stTakeDown);
-                else if(leftJumpOnAirCount > 0)
-                    machine.ChangeState(stJumpOnAir);
+                else if(leftJumpAirCount > 0)
+                    machine.ChangeState(stJumpAir);
             }
             else if(inputData.dashDown && leftDashCount > 0)
             {
                 machine.ChangeState(stDash);
             }
-            else if(isHitCeil || leftJumpOnWallFrame == 0)
+            else if(isHitCeil || leftJumpWallFrame == 0)
             {
                 if(inputData.yPositive == 0)
                     machine.ChangeState(stFreeFall);
                 else
                     machine.ChangeState(stGliding);
             }
-            else if(inputData.xInput == lookingDirection)
+            else if(inputData.xInput == lookDir)
             {
-                if(isHitLedge)
-                    machine.ChangeState(stLedgeClimb);
-                else if(!isDetectedGround && inputData.yNegative == 0 && isHitFeetSideWall == lookingDirection && isHitHeadSideWall == lookingDirection)
-                    machine.ChangeState(stIdleOnWall);
+                if(isHitLedgeHead)
+                    machine.ChangeState(stLedgeClimbHead);
+                else if(isHitLedgeBody)
+                    machine.ChangeState(stLedgeClimbBody);
+                else if(!isDetectedGround && inputData.yNegative == 0 && isHitWallB == lookDir && isHitWallT == lookDir)
+                    machine.ChangeState(stIdleWall);
             }
 
             // 내부 상태의 변경을 위한 제어 함수
-            if(inputData.jumpUp && !isCancelOfJumpOnWallXY)
+            if(inputData.jumpUp && !isJumpWallCanceledXY)
             {
-                isCancelOfJumpOnWallXY = true;
-                leftJumpOnWallFrame /= 2;
+                isJumpWallCanceledXY = true;
+                leftJumpWallFrame /= 2;
             }
-            if(inputData.xInput != 0 && !isCancelOfJumpOnWallX)
+            if(inputData.xInput != 0 && !isJumpWallCanceledX)
             {
-                isCancelOfJumpOnWallX = true;
+                isJumpWallCanceledXY = true;
             }
         }
     }
 
-    private void Logic_JumpOnWall()
+    private void Logic_JumpWall()
     {
-        if(leftJumpOnWallForceFrame > 0)
-        {
-            leftJumpOnWallForceFrame--;
-        }
+        if(leftJumpWallForceFrame > 0)
+            leftJumpWallForceFrame--;
 
-        if(leftJumpOnWallFrame > 0)
+        if(leftJumpWallFrame > 0)
         {
-            leftJumpOnWallFrame--;
+            leftJumpWallFrame--;
 
-            float vx = isCancelOfJumpOnWallX ? GetMoveSpeed() * inputData.xInput : jumpOnWallSpeedX * jumpOnWallGraphX[leftJumpOnWallFrame] * jumpOnWallLookingDirection;
-            float vy = jumpOnWallSpeedY * jumpOnWallGraphY[leftJumpOnWallFrame];
+            vx = (isJumpWallCanceledX ? GetMoveSpeed() * inputData.xInput : jumpWallSpeedX * jumpWallGraphX[leftJumpWallFrame] * jumpWallLookDir);
+            vy = jumpWallSpeedY * jumpWallGraphY[leftJumpWallFrame];
 
             SetVelocityXY(vx, vy);
         }

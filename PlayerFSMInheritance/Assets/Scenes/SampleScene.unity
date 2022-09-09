@@ -724,7 +724,7 @@ BoxCollider2D:
   m_GameObject: {fileID: 217744214}
   m_Enabled: 1
   m_Density: 1
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 6200000, guid: fa9f795bb97c1ad43a779a85c3ce2f04, type: 2}
   m_IsTrigger: 0
   m_UsedByEffector: 0
   m_UsedByComposite: 0
@@ -1041,7 +1041,7 @@ BoxCollider2D:
   m_GameObject: {fileID: 679649004}
   m_Enabled: 1
   m_Density: 1
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 6200000, guid: fa9f795bb97c1ad43a779a85c3ce2f04, type: 2}
   m_IsTrigger: 0
   m_UsedByEffector: 0
   m_UsedByComposite: 0
@@ -1191,7 +1191,7 @@ BoxCollider2D:
   m_GameObject: {fileID: 764070328}
   m_Enabled: 1
   m_Density: 1
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 6200000, guid: fa9f795bb97c1ad43a779a85c3ce2f04, type: 2}
   m_IsTrigger: 0
   m_UsedByEffector: 0
   m_UsedByComposite: 0
@@ -2502,6 +2502,8 @@ MonoBehaviour:
   ledgeCheckingHeight: 0.2
   isHitLedgeHead: 0
   isHitLedgeBody: 0
+  canCheckHangingBasic: 1
+  canCheckHangingSemi: 1
   isHangingGround: 0
   isRun: 0
   preInputFrameIdleGround: 0
@@ -2516,7 +2518,9 @@ MonoBehaviour:
   preInputFrameIdleWall: 0
   maxWallSlidingSpeed: 1.5
   wallSlidingFrame: 26
-  isEndOfLedgeAnimation: 0
+  ledgeHoldPos: {x: 0, y: 0}
+  ledgeEndPos: {x: 0, y: 0}
+  isLedgeAnimationEnded: 0
   jumpGroundCount: 1
   jumpGroundSpeed: 5.5
   jumpGroundFrame: 18
@@ -2577,7 +2581,7 @@ Rigidbody2D:
   m_AngularDrag: 0.05
   m_GravityScale: 1
   m_Material: {fileID: 6200000, guid: fa9f795bb97c1ad43a779a85c3ce2f04, type: 2}
-  m_Interpolate: 1
+  m_Interpolate: 0
   m_SleepingMode: 1
   m_CollisionDetection: 1
   m_Constraints: 4

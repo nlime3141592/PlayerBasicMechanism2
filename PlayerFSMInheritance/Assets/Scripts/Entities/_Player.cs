@@ -91,8 +91,8 @@ public class _Player : Entity
     public bool isHitLedgeBody;
 
     // Check Ledge Hanging
-    protected bool canCheckHangingBasic = true;
-    protected bool canCheckHangingSemi = true;
+    public bool canCheckHangingBasic = true;
+    public bool canCheckHangingSemi = true;
     protected RaycastHit2D leftHangingGround;
     protected RaycastHit2D rightHangingGround;
     public bool isHangingGround;
@@ -182,7 +182,6 @@ public class _Player : Entity
     public float jumpDownSpeed = 1.5f;
     public int jumpDownFrame = 13;
     private DiscreteGraph jumpDownGraph;
-    private RaycastHit2D currentJumpDownGround;
     private int leftJumpDownFrame;
 
     // stRoll options
@@ -376,7 +375,7 @@ public class _Player : Entity
 
         for(int i = 0; i < headOverSemiGroundCurrents.Length; i++)
         {
-            bool exist = Array.Exists<RaycastHit2D>(headOverSemiGroundBefores, (element) => element == headOverSemiGroundCurrents[i]);
+            bool exist = Array.Exists<RaycastHit2D>(headOverSemiGroundBefores, (element) => element.collider == headOverSemiGroundCurrents[i].collider);
             bool canCollision = base.CanCollision(headOverSemiGroundCurrents[i].collider);
 
             if(!exist && canCollision)
@@ -385,7 +384,7 @@ public class _Player : Entity
 
         for(int i = 0; i < headOverSemiGroundBefores.Length; i++)
         {
-            bool exist = Array.Exists<RaycastHit2D>(headOverSemiGroundCurrents, (element) => element == headOverSemiGroundBefores[i]);
+            bool exist = Array.Exists<RaycastHit2D>(headOverSemiGroundCurrents, (element) => element.collider == headOverSemiGroundBefores[i].collider);
             bool canCollision = base.CanCollision(headOverSemiGroundBefores[i].collider);
 
             if(!exist && !canCollision)
@@ -413,14 +412,14 @@ public class _Player : Entity
 
         if(lookDir == 1)
         {
-            sidePos = hrPos;
+            sidePos = rtPos;
             sideOverPos.Set(hrPos.x, hrPos.y + ledgeCheckingHeight);
             bodyPos = crPos;
             detectDir.Set(1.0f, 0.0f);
         }
         else if(lookDir == -1)
         {
-            sidePos = hlPos;
+            sidePos = ltPos;
             sideOverPos.Set(hlPos.x, hlPos.y + ledgeCheckingHeight);
             bodyPos = clPos;
             detectDir.Set(-1.0f, 0.0f);
@@ -437,8 +436,6 @@ public class _Player : Entity
         bool b = isHitLedgeHead;
         bool c = isHitLedgeBody;
 
-        Debug.Log(string.Format("{0}, {1}, {2}", a, b, c));
-
         if(!sideOverHit && (isHitLedgeHead || isHitLedgeBody))
         {
             float adder = 0.1f;
@@ -447,7 +444,6 @@ public class _Player : Entity
 
             detectedLedge = Physics2D.Raycast(sideOverPos + Vector2.right * distance, Vector2.down, height, layer);
             bool d = detectedLedge;
-            Debug.Log(string.Format("{0}", d));
             ledgeCornerTopPos.Set(detectedLedge.point.x, detectedLedge.point.y);
             ledgeCornerSidePos.Set(detectedLedge.point.x - adder * lookDir, detectedLedge.point.y - adder);
         }
@@ -525,7 +521,7 @@ public class _Player : Entity
         machine.SetCallbacks(stLedgeClimbHead, Input_LedgeClimbHead, Logic_LedgeClimbHead, Enter_LedgeClimbHead, End_LedgeClimbHead);
         machine.SetCallbacks(stLedgeClimbBody, Input_LedgeClimbBody, Logic_LedgeClimbBody, Enter_LedgeClimbBody, End_LedgeClimbBody);
         machine.SetCallbacks(stJumpGround, Input_JumpGround, Logic_JumpGround, Enter_JumpGround, null);
-        machine.SetCallbacks(stJumpDown, Input_JumpDown, Logic_JumpDown, Enter_JumpDown, End_JumpDown);
+        machine.SetCallbacks(stJumpDown, Input_JumpDown, Logic_JumpDown, Enter_JumpDown, null);
         machine.SetCallbacks(stRoll, Input_Roll, Logic_Roll, Enter_Roll, null);
         machine.SetCallbacks(stJumpAir, Input_JumpAir, Logic_JumpAir, Enter_JumpAir, null);
         machine.SetCallbacks(stDash, Input_Dash, Logic_Dash, Enter_Dash, null);
@@ -941,13 +937,23 @@ public class _Player : Entity
         }
         else
         {
-            if(inputData.xInput == 0)
+            float tx = Mathf.Abs(currentVelocity.x);
+
+            if(tx > glidingSpeed)
+            {
+                leftGlidingDeaccelFrameX = glidingDeaccelFrameX;
+                proceedGlidingAccelFrameX = glidingAccelFrameX;
+            }
+            else if(inputData.xInput == 0)
             {
                 for(int i = 0; i < glidingDeaccelFrameX; i++)
                 {
-                    if(Mathf.Abs(currentVelocity.x) >= glidingDeaccelGraphX[i])
+                    if(Mathf.Abs(currentVelocity.x) >= glidingDeaccelGraphX[i] * glidingSpeed)
                     {
                         leftGlidingDeaccelFrameX = i;
+                        proceedGlidingAccelFrameX = glidingAccelFrameX;
+                        while(proceedGlidingAccelFrameX > 0 &&  glidingAccelGraphX[proceedGlidingAccelFrameX - 1] > glidingDeaccelGraphX[leftGlidingDeaccelFrameX])
+                            proceedGlidingAccelFrameX--;
                         break;
                     }
                 }
@@ -956,9 +962,12 @@ public class _Player : Entity
             {
                 for(int i = 0; i < glidingAccelFrameX; i++)
                 {
-                    if(Mathf.Abs(currentVelocity.x) >= glidingAccelGraphX[i])
+                    if(Mathf.Abs(currentVelocity.x) >= glidingAccelGraphX[i] * glidingSpeed)
                     {
                         proceedGlidingAccelFrameX = i;
+                        leftGlidingDeaccelFrameX = 0;
+                        while(leftGlidingDeaccelFrameX < glidingDeaccelFrameX && glidingDeaccelGraphX[leftGlidingDeaccelFrameX] < glidingAccelGraphX[proceedGlidingAccelFrameX])
+                            leftGlidingDeaccelFrameX++;
                         break;
                     }
                 }
@@ -991,18 +1000,18 @@ public class _Player : Entity
     {
         vy = -glidingSpeed;
 
-        if(currentVelocity.x * inputData.xInput < 0.0f)
+        if(currentVelocity.x * inputData.xInput < 0.0f) // 방향전환 확인
         {
-            proceedGlidingAccelFrameX = 0;
-            leftGlidingDeaccelFrameX = 0;
-            vx = 0.0f;
+            vx *= -1.0f;
         }
         else if(inputData.xInput == 0)
         {
             if(leftGlidingDeaccelFrameX > 0)
                 leftGlidingDeaccelFrameX--;
 
-            proceedGlidingAccelFrameX = 0;
+            while(proceedGlidingAccelFrameX > 0 &&  glidingAccelGraphX[proceedGlidingAccelFrameX - 1] > glidingDeaccelGraphX[leftGlidingDeaccelFrameX])
+                proceedGlidingAccelFrameX--;
+
             vx = CheckVelocityX(GetMoveSpeed() * glidingDeaccelGraphX[leftGlidingDeaccelFrameX] * lookDir);
         }
         else if(inputData.xInput != 0)
@@ -1010,7 +1019,9 @@ public class _Player : Entity
             if(proceedGlidingAccelFrameX < glidingAccelFrameX)
                 proceedGlidingAccelFrameX++;
 
-            leftGlidingDeaccelFrameX = glidingDeaccelFrameX;
+            while(leftGlidingDeaccelFrameX < glidingDeaccelFrameX && glidingDeaccelGraphX[leftGlidingDeaccelFrameX] < glidingAccelGraphX[proceedGlidingAccelFrameX - 1])
+                leftGlidingDeaccelFrameX++;
+
             vx = CheckVelocityX(GetMoveSpeed() * glidingAccelGraphX[proceedGlidingAccelFrameX - 1] * lookDir);
         }
 
@@ -1107,18 +1118,14 @@ public class _Player : Entity
     {
         DisableGravity();
 
-        canUpdateLookDir = false;
-        canCheckLedge = false;
-        isLedgeAnimationEnded = false;
-
         Vector2 sidePos = Vector2.zero;
         Vector2 handDir = Vector2.zero;
         Vector2 feetDir = Vector2.zero;
 
         if(lookDir == 1)
-            sidePos = hrPos;
+            sidePos = rtPos;
         else if(lookDir == -1)
-            sidePos = hlPos;
+            sidePos = ltPos;
 
         handDir.Set(transform.position.x - sidePos.x, transform.position.y - sidePos.y);
         feetDir.Set(transform.position.x - fPos.x, transform.position.y - fPos.y);
@@ -1126,6 +1133,11 @@ public class _Player : Entity
         ledgeHoldPos.Set(ledgeCornerSidePos.x + handDir.x, ledgeCornerSidePos.y + handDir.y);
         ledgeEndPos.Set(ledgeCornerTopPos.x + feetDir.x, ledgeCornerTopPos.y + feetDir.y);
 
+        canUpdateLookDir = false;
+        canCheckLedge = false;
+        isLedgeAnimationEnded = false;
+
+        // TODO: Animation Clip을 넣고 OnLedgeAnimationEnded 함수를 Animation Event로 등록 후 이 코드는 삭제.
         Action holdLedge = () =>
         {
             Thread.Sleep(2000);
@@ -1162,10 +1174,6 @@ public class _Player : Entity
     {
         DisableGravity();
 
-        canUpdateLookDir = false;
-        canCheckLedge = false;
-        isLedgeAnimationEnded = false;
-
         Vector2 sidePos = Vector2.zero;
         Vector2 handDir = Vector2.zero;
         Vector2 feetDir = Vector2.zero;
@@ -1181,6 +1189,11 @@ public class _Player : Entity
         ledgeHoldPos.Set(ledgeCornerSidePos.x + handDir.x, ledgeCornerSidePos.y + handDir.y);
         ledgeEndPos.Set(ledgeCornerTopPos.x + feetDir.x, ledgeCornerTopPos.y + feetDir.y);
 
+        canUpdateLookDir = false;
+        canCheckLedge = false;
+        isLedgeAnimationEnded = false;
+
+        // TODO: Animation Clip을 넣고 OnLedgeAnimationEnded 함수를 Animation Event로 등록 후 이 코드는 삭제.
         Action holdLedge = () =>
         {
             Thread.Sleep(2000);
@@ -1281,7 +1294,11 @@ public class _Player : Entity
 
     private void Input_JumpDown()
     {
-        if(leftJumpDownFrame == 0 || isHitCeil)
+        // if(leftJumpDownFrame == 0 || isHitCeil) machine.ChangeState(stFreeFall);
+
+        if(isHitCeil)
+            machine.ChangeState(stFreeFall);
+        else if(Array.Exists<RaycastHit2D>(headOverSemiGroundCurrents, (element) => element.collider == currentSitGround.collider && element.distance >= 0.1f))
             machine.ChangeState(stFreeFall);
     }
 
@@ -1290,15 +1307,23 @@ public class _Player : Entity
         if(leftJumpDownFrame > 0)
         {
             leftJumpDownFrame--;
-            vx = GetMoveSpeed() * inputData.xInput;
+            // vx = GetMoveSpeed() * inputData.xInput;
+            vx = 0.0f;
             vy = jumpDownSpeed * jumpDownGraph[leftJumpDownFrame];
             SetVelocityXY(vx, vy);
-        }
-    }
 
-    private void End_JumpDown()
-    {
-        currentJumpDownGround = default(RaycastHit2D);
+            if(leftJumpDownFrame == 0)
+                proceedFreeFallFrame = 0;
+        }
+        else
+        {
+            if(proceedFreeFallFrame < freeFallFrame)
+                proceedFreeFallFrame++;
+
+            vx = 0.0f;
+            vy = -maxFreeFallSpeed * freeFallGraph[proceedFreeFallFrame - 1];
+            SetVelocityXY(vx, vy);
+        }
     }
     #endregion
 

@@ -128,12 +128,12 @@ public class Player : Entity
 
     // stSit options
     // TODO: 외부 클래스에서 접근해야 할 필요가 있음.
-    private int proceedSitFrame;
+    public int proceedSitFrame;
     private RaycastHit2D currentSitGround;
 
     // stHeadUp options
     // TODO: 외부 클래스에서 접근해야 할 필요가 있음.
-    private int proceedHeadUpFrame;
+    public int proceedHeadUpFrame;
 
     // stWalk options
     public float walkSpeed = 3.5f;

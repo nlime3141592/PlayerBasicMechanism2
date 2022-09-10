@@ -9,6 +9,7 @@ public class Entity : MonoBehaviour
     public BoxCollider2D feetBox;
     public BoxCollider2D headBox;
     public BoxCollider2D bodyBox;
+    public CompositeCollider2D compCol;
     protected Rigidbody2D rigid { get; private set; }
 
     // Entity Physics
@@ -126,6 +127,7 @@ public class Entity : MonoBehaviour
         Physics2D.IgnoreCollision(feetBox, collider, false);
         Physics2D.IgnoreCollision(headBox, collider, false);
         Physics2D.IgnoreCollision(bodyBox, collider, false);
+        Physics2D.IgnoreCollision(compCol, collider, false);
     }
 
     protected void IgnoreCollision(Collider2D collider)
@@ -133,6 +135,7 @@ public class Entity : MonoBehaviour
         Physics2D.IgnoreCollision(feetBox, collider, true);
         Physics2D.IgnoreCollision(headBox, collider, true);
         Physics2D.IgnoreCollision(bodyBox, collider, true);
+        Physics2D.IgnoreCollision(compCol, collider, true);
     }
 
     protected bool CanCollision(Collider2D collider)

@@ -37,9 +37,20 @@ public class Player : Entity
     private Vector2 initialPosition;
 
     // 충돌 판정의 특이점들 (singular points)
-    private Bounds hBounds;
-    private Bounds fBounds;
-    private Bounds cBounds;
+    protected Vector2 dir_hPos;
+    protected Vector2 dir_hlPos;
+    protected Vector2 dir_hrPos;
+    protected Vector2 dir_fPos;
+    protected Vector2 dir_flPos;
+    protected Vector2 dir_frPos;
+    protected Vector2 dir_cPos;
+    protected Vector2 dir_clPos;
+    protected Vector2 dir_crPos;
+    protected Vector2 dir_ltPos;
+    protected Vector2 dir_lbPos;
+    protected Vector2 dir_rtPos;
+    protected Vector2 dir_rbPos;
+
     protected Vector2 hPos; // Head Position
     protected Vector2 hlPos; // Head Left Position
     protected Vector2 hrPos; // Head Right Position
@@ -243,24 +254,53 @@ public class Player : Entity
     private bool isJumpWallCanceledXY;
     #endregion
 
+    private void m_InitPositions()
+    {
+        Bounds hBounds = headBox.bounds;
+        Bounds fBounds = feetBox.bounds;
+        Bounds cBounds = bodyBox.bounds;
+        Vector2 pPos = transform.position;
+
+        headBox.usedByComposite = false;
+        feetBox.usedByComposite = false;
+        bodyBox.usedByComposite = false;
+
+        dir_hPos.Set(hBounds.center.x - pPos.x, hBounds.max.y - pPos.y);
+        dir_hlPos.Set(hBounds.min.x - pPos.x, hBounds.center.y - pPos.y);
+        dir_hrPos.Set(hBounds.max.x - pPos.x, hBounds.center.y - pPos.y);
+        dir_fPos.Set(fBounds.center.x - pPos.x, fBounds.min.y - pPos.y);
+        dir_flPos.Set(fBounds.min.x - pPos.x, fBounds.center.y - pPos.y);
+        dir_frPos.Set(fBounds.max.x - pPos.x, fBounds.center.y - pPos.y);
+        dir_cPos.Set(cBounds.center.x - pPos.x, cBounds.center.y - pPos.y);
+        dir_clPos.Set(cBounds.min.x - pPos.x, cBounds.center.y - pPos.y);
+        dir_crPos.Set(cBounds.max.x - pPos.x, cBounds.center.y - pPos.y);
+        dir_ltPos.Set(hBounds.min.x - pPos.x, hBounds.min.y - pPos.y);
+        dir_lbPos.Set(fBounds.min.x - pPos.x, fBounds.max.y - pPos.y);
+        dir_rtPos.Set(hBounds.max.x - pPos.x, hBounds.min.y - pPos.y);
+        dir_rbPos.Set(fBounds.max.x - pPos.x, fBounds.max.y - pPos.y);
+
+        headBox.usedByComposite = true;
+        feetBox.usedByComposite = true;
+        bodyBox.usedByComposite = true;
+    }
+
     private void m_UpdatePositions()
     {
-        hBounds = headBox.bounds;
-        fBounds = feetBox.bounds;
-        cBounds = bodyBox.bounds;
-        hPos.Set(hBounds.center.x, hBounds.max.y);
-        hlPos.Set(hBounds.min.x, hBounds.center.y);
-        hrPos.Set(hBounds.max.x, hBounds.center.y);
-        fPos.Set(fBounds.center.x, fBounds.min.y);
-        flPos.Set(fBounds.min.x, fBounds.center.y);
-        frPos.Set(fBounds.max.x, fBounds.center.y);
-        cPos.Set(cBounds.center.x, cBounds.center.y);
-        clPos.Set(cBounds.min.x, cBounds.center.y);
-        crPos.Set(cBounds.max.x, cBounds.center.y);
-        ltPos.Set(hBounds.min.x, hBounds.min.y);
-        lbPos.Set(fBounds.min.x, fBounds.max.y);
-        rtPos.Set(hBounds.max.x, hBounds.min.y);
-        rbPos.Set(fBounds.max.x, fBounds.max.y);
+        Vector2 pPos = transform.position;
+
+        hPos.Set(pPos.x + dir_hPos.x, pPos.y + dir_hPos.y);
+        hlPos.Set(pPos.x + dir_hlPos.x, pPos.y + dir_hlPos.y);
+        hrPos.Set(pPos.x + dir_hrPos.x, pPos.y + dir_hrPos.y);
+        fPos.Set(pPos.x + dir_fPos.x, pPos.y + dir_fPos.y);
+        flPos.Set(pPos.x + dir_flPos.x, pPos.y + dir_flPos.y);
+        frPos.Set(pPos.x + dir_frPos.x, pPos.y + dir_frPos.y);
+        cPos.Set(pPos.x + dir_cPos.x, pPos.y + dir_cPos.y);
+        clPos.Set(pPos.x + dir_clPos.x, pPos.y + dir_clPos.y);
+        crPos.Set(pPos.x + dir_crPos.x, pPos.y + dir_crPos.y);
+        ltPos.Set(pPos.x + dir_ltPos.x, pPos.y + dir_ltPos.y);
+        lbPos.Set(pPos.x + dir_lbPos.x, pPos.y + dir_lbPos.y);
+        rtPos.Set(pPos.x + dir_rtPos.x, pPos.y + dir_rtPos.y);
+        rbPos.Set(pPos.x + dir_rbPos.x, pPos.y + dir_rbPos.y);
     }
 
     protected void UpdateLookDir()
@@ -510,6 +550,7 @@ public class Player : Entity
         this.CheckDataTable(Application.persistentDataPath + "/DataTable.txt");
 
         initialPosition = transform.position;
+        m_InitPositions();
 
         spRenderer = GetComponent<SpriteRenderer>();
         hexaCol = GetComponent<ElongatedHexagonCollider2D>();
@@ -537,7 +578,9 @@ public class Player : Entity
         machine.SetCallbacks(stTakeDown, Input_TakeDown, Logic_TakeDown, Enter_TakeDown, End_TakeDown);
         machine.SetCallbacks(stJumpWall, Input_JumpWall, Logic_JumpWall, Enter_JumpWall, null);
 
-        InitGraphs();
+        // TODO: ApplyFile은 테스트할 때만 사용하고, 본 스크립트의 초기값을 설정하고, InitGraphs() 함수만 수행하도록 한다.
+        // InitGraphs();
+        ApplyFile();
     }
 
     public void InitGraphs()
@@ -563,7 +606,7 @@ public class Player : Entity
 
         machine.UpdateInput();
 
-        UnityEngine.Debug.Log(string.Format("current state: {0}", machine.state));
+        // UnityEngine.Debug.Log(string.Format("current state: {0}", machine.state));
     }
 
     protected override void FixedUpdate()
@@ -1149,7 +1192,7 @@ public class Player : Entity
         // TODO: Animation Clip을 넣고 OnLedgeAnimationEnded 함수를 Animation Event로 등록 후 이 코드는 삭제.
         Action holdLedge = () =>
         {
-            Thread.Sleep(2000);
+            Thread.Sleep(500);
             isLedgeAnimationEnded = true;
         };
 
@@ -1205,7 +1248,7 @@ public class Player : Entity
         // TODO: Animation Clip을 넣고 OnLedgeAnimationEnded 함수를 Animation Event로 등록 후 이 코드는 삭제.
         Action holdLedge = () =>
         {
-            Thread.Sleep(2000);
+            Thread.Sleep(500);
             isLedgeAnimationEnded = true;
         };
 
@@ -1527,7 +1570,7 @@ public class Player : Entity
         isTakeDownAirIdleEnded = false;
         isLandingAfterTakeDown = false;
 
-        rigid.constraints |= RigidbodyConstraints2D.FreezePositionX;
+        // rigid.constraints |= RigidbodyConstraints2D.FreezePositionX;
     }
 
     private void Input_TakeDown()
@@ -1577,7 +1620,7 @@ public class Player : Entity
 
     private void End_TakeDown()
     {
-        rigid.constraints &= ~RigidbodyConstraints2D.FreezePositionX;
+        // rigid.constraints &= ~RigidbodyConstraints2D.FreezePositionX;
     }
     #endregion
 

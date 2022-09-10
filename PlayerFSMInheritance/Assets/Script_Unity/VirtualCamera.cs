@@ -6,6 +6,7 @@ using Cinemachine;
 public class VirtualCamera : MonoBehaviour
 {
     public Player player;
+    public float initY = 3.0f;
     public float offsetY = 2.5f;
     public int sitFrame = 30;
     public int headUpFrame = 30;
@@ -41,7 +42,7 @@ public class VirtualCamera : MonoBehaviour
             currentChangeFrame++;
 
         dx = transposer.m_FollowOffset.x;
-        dy = offsetY * dir * changeGraph[currentChangeFrame];
+        dy = initY + offsetY * dir * changeGraph[currentChangeFrame];
         dz = -10.0f;
 
         offsetVector.Set(dx, dy, dz);
